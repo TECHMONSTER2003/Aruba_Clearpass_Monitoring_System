@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icon %}
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+{% block page_sub %}ClearPass cluster health at a glance · refreshes every 30 s{% endblock %}
+
+{% block content %}
+<div class="stack">
+  {% if can_edit and tiles %}
+  <div class="toolbar">
+    <span class="muted">Values refresh on their own schedule (see Runbook § Polled vs reactive). Need them now?</span>
+    <form method="post" action="{{ url_for('main.poll_all') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button class="btn btn-primary" type="submit" title="Run every poll job on every enabled node immediately">{{ icon('activity', 'icon-sm') }} Poll all now</button>
+    </form>
+  </div>
+  {% endif %}
+  <div id="dash-body" class="stack" hx-get="{{ url_for('main.dashboard_tiles') }}" hx-trigger="every 30s" hx-swap="innerHTML">
+    {% include "_dashboard_body.html" %}
+  </div>
+
+  {% if not tiles %}
+  <section class="card">
+    <div class="card-b">
+      <div class="empty">
+        <div class="empty-art">{{ icon('server') }}</div>
+        <h3>No ClearPass nodes yet</h3>
+        <p>Add your first CPPM node to start polling. Credentials are encrypted at rest and never shown back in the UI.</p>
+        <ol class="steps">
+          <li><span class="step-n">1</span><div><b>Add the node</b><span>Name, management IP, SNMP v2c/v3 and API client</span></div></li>
+          <li><span class="step-n">2</span><div><b>Test connection</b><span>ICMP, SNMP index discovery and an API token check</span></div></li>
+          <li><span class="step-n">3</span><div><b>Point CPPM here</b><span>Send SNMP traps to :162 and syslog (CEF) to :514</span></div></li>
+        </ol>
+        {% if can_edit %}<a class="btn btn-primary" href="{{ url_for('nodes.create') }}" style="margin-top:22px">{{ icon('plus', 'icon-sm') }} Add node</a>{% endif %}
+      </div>
+    </div>
+  </section>
+  {% endif %}
+</div>
+{% endblock %}

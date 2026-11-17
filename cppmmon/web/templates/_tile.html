@@ -1,0 +1,62 @@
+{% from "_macros.html" import icon %}
+{% macro fmt_uptime(s) -%}
+{%- if s is none -%}—{%- elif s >= 86400 -%}{{ (s // 86400) }}d {{ (s % 86400) // 3600 }}h{%- elif s >= 3600 -%}{{ s // 3600 }}h {{ (s % 3600) // 60 }}m{%- else -%}{{ s // 60 }}m{%- endif -%}
+{%- endmacro %}
+{% macro status_pill(status) -%}
+{% set cls = {'up': 'ok', 'degraded': 'warn', 'down': 'crit', 'paused': 'muted'}.get(status, 'muted') %}
+<span class="pill {{ cls }}">{{ {'up': 'Up', 'degraded': 'Degraded', 'down': 'Down', 'paused': 'Paused'}.get(status, 'Unknown') }}</span>
+{%- endmacro %}
+
+{% macro tile(t) -%}
+{% set n = t.node %}{% set st = t.state %}
+<a class="kpi-tile status-{{ t.status }}" href="{{ url_for('nodes.overview', node_id=n.id) }}">
+  <div class="kpi-head">
+    <div class="kpi-title">
+      <b>{{ n.name }}</b>
+      <span class="mono">{{ n.ip }}</span>
+    </div>
+    {{ status_pill(t.status) }}
+  </div>
+  <div class="kpi-meta">
+    {% if n.role and n.role != 'unknown' %}<span class="tag role-{{ n.role }}">{{ n.role|capitalize }}</span>{% elif st and st.node_type %}<span class="tag">{{ st.node_type }}</span>{% endif %}
+    {% if st and st.version %}<span class="tag">CPPM {{ st.version }}</span>{% endif %}
+    <span class="tag" title="System uptime (cppmSystemUptime)">{{ icon('clock', 'icon-sm') }} {{ fmt_uptime(st.uptime_s if st else none) }}</span>
+  </div>
+
+  {% if t.status == 'paused' %}
+  <div class="kpi-paused">Polling paused: receiving traps and syslog only.</div>
+  {% else %}
+  <div class="gauges">
+    {% for g in t.gauges %}
+    <div class="gauge">
+      <div class="gauge-top"><span>{{ g.label }}</span><b class="lvl-{{ g.level }}">{{ '%.0f'|format(g.value) ~ '%' if g.value is not none else '—' }}</b></div>
+      <div class="bar"><span class="fill lvl-{{ g.level }}" style="width: {{ [g.value or 0, 100]|min }}%"></span></div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="kpi-grid">
+    <div><span>Auth success today</span><b>{{ '%.1f%%'|format(t.auth_success_pct) if t.auth_success_pct is not none else '—' }}</b></div>
+    <div><span>Auths / min</span><b>{{ '%.1f'|format(t.auth_per_min) if t.auth_per_min is not none else '—' }}</b></div>
+    <div><span>Endpoints</span><b>{{ '{:,}'.format(t.endpoints|int) if t.endpoints is not none else '—' }}</b></div>
+    <div><span>ICMP RTT</span><b>{{ '%.1f ms'|format(t.rtt) if t.rtt is not none else '—' }}</b></div>
+  </div>
+
+  <div class="svc-row">
+    {% for s in t.services %}<span class="svc lvl-{{ s.level }}" title="{{ s.label }}: {{ s.state or 'not polled' }}"><i></i>{{ s.label }}</span>{% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="kpi-foot">
+    {% set cd = t.cert_days %}
+    <span class="{{ 'lvl-crit' if cd is not none and cd < 7 else ('lvl-warn' if cd is not none and cd <= 30 else '') }}" title="Nearest server certificate expiry">
+      {{ icon('shield', 'icon-sm') }} {% if cd is none %}cert —{% elif cd < 0 %}cert EXPIRED {{ -cd }}d{% else %}cert {{ cd }}d{% endif %}
+    </span>
+    <span class="{{ 'lvl-crit' if t.license_pct and t.license_pct >= 100 else ('lvl-warn' if t.license_pct and t.license_pct >= 90 else '') }}" title="Highest license utilisation">
+      {{ icon('book', 'icon-sm') }} lic {{ '%.0f%%'|format(t.license_pct) if t.license_pct is not none else '—' }}
+    </span>
+    <span class="{{ 'lvl-crit' if t.open_alerts else '' }}">{{ icon('bell', 'icon-sm') }} {{ t.open_alerts }} open</span>
+    <span class="kpi-age {{ 'lvl-warn' if t.stale else '' }}" title="Last poll sample">{{ t.last_poll | ago if t.last_poll else 'no data' }}</span>
+  </div>
+</a>
+{%- endmacro %}

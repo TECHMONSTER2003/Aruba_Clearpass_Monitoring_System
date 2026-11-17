@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icon %}
+{% block title %}Discover cluster{% endblock %}
+{% block page_title %}Discover cluster members{% endblock %}
+{% block page_sub %}<a href="{{ url_for('nodes.index') }}">Nodes</a> / via {{ src.name }} ({{ src.ip }}) · GET /api/cluster/server{% endblock %}
+
+{% block content %}
+{% set new = rows | selectattr('node', 'none') | list %}
+<form method="post" action="{{ url_for('nodes.discover', node_id=src.id) }}" class="stack">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <section class="card">
+    <div class="card-h"><span class="sec-icon">{{ icon('server') }}</span>
+      <div><h2>{{ rows|length }} cluster member(s)</h2><div class="sub">{{ new|length }} not monitored yet</div></div></div>
+    <div class="card-b flush table-scroll">
+      <table class="table">
+        <thead><tr><th class="chk">{% if new %}<input type="checkbox" data-select-all="ip" checked aria-label="Select all">{% endif %}</th>
+          <th>Server</th><th>Management IP</th><th>Role</th><th>Replication</th><th>In monitor</th></tr></thead>
+        <tbody>
+        {% for r in rows %}
+          <tr>
+            <td class="chk">{% if r.node is none %}<input type="checkbox" name="ip" value="{{ r.ip }}" checked aria-label="Add {{ r.name }}">{% endif %}</td>
+            <td><div class="cell-title">{{ r.name }}</div><div class="cell-sub mono">{{ r.uuid }}</div></td>
+            <td class="mono">{{ r.ip }}</td>
+            <td><span class="tag {{ 'role-publisher' if r.publisher }}">{{ 'Publisher' if r.publisher else 'Subscriber' }}</span></td>
+            <td>{{ r.replication or '—' }}</td>
+            <td>{% if r.node %}<a href="{{ url_for('nodes.overview', node_id=r.node.id) }}"><span class="pill ok">{{ r.node.name }}</span></a>{% else %}<span class="pill muted">not monitored</span>{% endif %}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  {% if new %}
+  <section class="card">
+    <div class="card-h"><span class="sec-icon">{{ icon('lock') }}</span><div><h2>Credentials for the new nodes</h2>
+      <div class="sub">Copied from {{ src.name }} in encrypted form (never displayed). CPPM API clients are cluster-wide; SNMP settings are per server but usually identical.</div></div></div>
+    <div class="card-b">
+      <label class="switch-row"><span class="switch"><input type="checkbox" name="copy_snmp" checked><span class="slider"></span></span><span><b>Copy SNMP settings</b><small>version, community or v3 user/keys</small></span></label>
+      <label class="switch-row"><span class="switch"><input type="checkbox" name="copy_api" {{ 'checked' if src.api_enabled }}><span class="slider"></span></span><span><b>Copy REST API client</b><small>grant type, client ID/secret, TLS setting</small></span></label>
+      <label class="switch-row"><span class="switch"><input type="checkbox" name="copy_trap" checked><span class="slider"></span></span><span><b>Copy trap community</b></span></label>
+    </div>
+  </section>
+  <div class="form-actions">
+    <a class="btn btn-ghost" href="{{ url_for('nodes.index') }}">Cancel</a>
+    <button class="btn btn-primary" type="submit" data-needs-selection>{{ icon('plus', 'icon-sm') }} Add selected nodes</button>
+  </div>
+  {% else %}
+  <div class="alert info">{{ icon('check') }}<span>Every member of this cluster is already monitored.</span></div>
+  {% endif %}
+</form>
+{% endblock %}

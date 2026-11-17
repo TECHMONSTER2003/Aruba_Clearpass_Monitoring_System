@@ -1,0 +1,23 @@
+{% from "_macros.html" import icon, theme_toggle %}
+<!doctype html>
+<html lang="en">
+<head>
+  {% include "_head.html" %}
+  <title>{{ title }} · ClearPass Monitor</title>
+</head>
+<body>
+{% include "_icons.html" %}
+<main class="error-page">
+  <div class="card" style="max-width:460px;width:calc(100% - 32px)">
+    <div class="card-b">
+      <div class="empty" style="padding:28px 8px">
+        <div class="empty-art">{{ icon('alert') }}</div>
+        <h3>{{ code }} · {{ title }}</h3>
+        <p>{{ message }}</p>
+        <a class="btn btn-primary" href="{{ url_for('main.dashboard') }}">Back to dashboard</a>
+      </div>
+    </div>
+  </div>
+</main>
+</body>
+</html>

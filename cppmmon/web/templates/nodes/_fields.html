@@ -1,0 +1,48 @@
+{% macro text(name, label, v, errors, help=None, placeholder='', mono=False, required=False, autocomplete='off') -%}
+<div class="field {{ 'has-error' if errors.get(name) }}">
+  <label for="f-{{ name }}">{{ label }}{% if required %} <span class="req">*</span>{% endif %}</label>
+  <input class="input input-plain {{ 'mono' if mono }}" id="f-{{ name }}" name="{{ name }}" type="text"
+         value="{{ v.get(name) if v.get(name) is not none else '' }}" placeholder="{{ placeholder }}"
+         autocomplete="{{ autocomplete }}" spellcheck="false">
+  {% if errors.get(name) %}<div class="field-error">{{ errors[name] }}</div>{% elif help %}<div class="field-help">{{ help }}</div>{% endif %}
+</div>
+{%- endmacro %}
+
+{% macro secret(name, label, col, node, errors, help=None, required=False) -%}
+{% set stored = node is not none and node[col] %}
+<div class="field {{ 'has-error' if errors.get(name) }}">
+  <label for="f-{{ name }}">{{ label }}{% if required %} <span class="req">*</span>{% endif %}
+    {% if stored %}<span class="stored-badge" title="A value is stored (encrypted). It is never shown.">stored</span>{% endif %}
+  </label>
+  <div class="input-wrap">
+    <input class="input input-plain" id="f-{{ name }}" name="{{ name }}" type="password" autocomplete="new-password"
+           placeholder="{{ '•••••••• leave blank to keep' if stored else '' }}">
+    <button type="button" class="reveal" data-reveal="f-{{ name }}" aria-pressed="false" aria-label="Show value">
+      <svg class="icon icon-eye" aria-hidden="true"><use href="#i-eye"/></svg>
+      <svg class="icon icon-eye-off" aria-hidden="true"><use href="#i-eye-off"/></svg>
+    </button>
+  </div>
+  {% if stored %}
+  <label class="check-inline"><input type="checkbox" name="clear_{{ name }}"> Remove stored value</label>
+  {% endif %}
+  {% if errors.get(name) %}<div class="field-error">{{ errors[name] }}</div>{% elif help %}<div class="field-help">{{ help }}</div>{% endif %}
+</div>
+{%- endmacro %}
+
+{% macro select(name, label, v, errors, options, none_label=None, help=None) -%}
+<div class="field {{ 'has-error' if errors.get(name) }}">
+  <label for="f-{{ name }}">{{ label }}</label>
+  <select class="input input-plain select" id="f-{{ name }}" name="{{ name }}">
+    {% if none_label %}<option value="">{{ none_label }}</option>{% endif %}
+    {% for o in options %}<option value="{{ o }}" {{ 'selected' if v.get(name) == o }}>{{ o }}</option>{% endfor %}
+  </select>
+  {% if errors.get(name) %}<div class="field-error">{{ errors[name] }}</div>{% elif help %}<div class="field-help">{{ help }}</div>{% endif %}
+</div>
+{%- endmacro %}
+
+{% macro toggle(name, label, checked, help=None, data='') -%}
+<label class="switch-row">
+  <span class="switch"><input type="checkbox" name="{{ name }}" {{ 'checked' if checked }} {{ data|safe }}><span class="slider"></span></span>
+  <span><b>{{ label }}</b>{% if help %}<small>{{ help }}</small>{% endif %}</span>
+</label>
+{%- endmacro %}

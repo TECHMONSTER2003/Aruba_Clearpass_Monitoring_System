@@ -1,0 +1,359 @@
+# Seed trap catalog for CPPM-MIB (base .1.3.6.1.4.1.14823.1.6.1.1)
+# Source: CPPM-MIB (Observium) + HPE ClearPass 6.10 "SNMP Traps and OIDs".
+# The user-supplied trap database OVERRIDES entries here (upsert by oid).
+# Templates: Jinja2. Context: node.{name,ip,role,version}, vb.<varbind_name>, event.ts
+
+varbinds:
+  "1.3.6.1.4.1.14823.1.6.1.1.200.100.1":  cppmNodeName
+  "1.3.6.1.4.1.14823.1.6.1.1.200.100.2":  cppmNodeIp
+  "1.3.6.1.4.1.14823.1.6.1.1.200.100.3":  cppmClusterServerIp
+  "1.3.6.1.4.1.14823.1.6.1.1.200.100.4":  cppmNodeApplicationName
+  "1.3.6.1.4.1.14823.1.6.1.1.200.100.5":  cppmNodeCertApplicationName
+  "1.3.6.1.4.1.14823.1.6.1.1.200.100.6":  cppmLicenseDaysRemaining
+  "1.3.6.1.4.1.14823.1.6.1.1.200.100.7":  cppmActivationDaysRemaining
+  "1.3.6.1.4.1.14823.1.6.1.1.200.100.8":  cppmCertDaysRemaining
+  "1.3.6.1.4.1.14823.1.6.1.1.200.100.9":  cppmDiskSpaceRemaining
+  "1.3.6.1.4.1.14823.1.6.1.1.200.100.10": cppmMemoryRemaining
+  "1.3.6.1.4.1.14823.1.6.1.1.200.100.11": cppmClusterOutOfSyncMinutes
+  "1.3.6.1.4.1.14823.1.6.1.1.200.100.12": cppmClusterLicenseTotalCount
+  "1.3.6.1.4.1.14823.1.6.1.1.200.100.13": cppmClusterLicenseUsageCount
+  "1.3.6.1.4.1.14823.1.6.1.1.200.100.14": cppmResourceUnit
+  "1.3.6.1.4.1.14823.1.6.1.1.200.100.15": cppmImageFile
+  "1.3.6.1.4.1.14823.1.6.1.1.200.100.16": cppmImageInstallStatus
+  "1.3.6.1.4.1.14823.1.6.1.1.200.100.17": cppmServiceName
+  "1.3.6.1.4.1.14823.1.6.1.1.200.100.18": cppmServiceStatus
+  "1.3.6.1.4.1.14823.1.6.1.1.200.100.19": cppmLicenseApplicationName
+  "1.3.6.1.4.1.14823.1.6.1.1.200.100.20": cppmLicenseOverrunDailyCount
+  "1.3.6.1.4.1.14823.1.6.1.1.200.100.35": cppmTrapMessage
+  "1.3.6.1.4.1.14823.1.6.1.1.200.100.37": cppmCPUAverageLoad
+  # CPPM built-in watchdog (net-snmp DISMAN-EVENT-MIB + UCD-SNMP tables), observed on 6.14.1 (2026-11-17)
+  "1.3.6.1.2.1.88.2.1.1": mteHotTrigger
+  "1.3.6.1.2.1.88.2.1.2": mteHotTargetName
+  "1.3.6.1.2.1.88.2.1.3": mteHotContextName
+  "1.3.6.1.2.1.88.2.1.4": mteHotOID
+  "1.3.6.1.2.1.88.2.1.5": mteHotValue
+  "1.3.6.1.2.1.88.2.1.6": mteFailedReason
+  "1.3.6.1.4.1.2021.8.1.2": extNames
+  "1.3.6.1.4.1.2021.8.1.100": extResult
+  "1.3.6.1.4.1.2021.8.1.101": extOutput
+  "1.3.6.1.4.1.2021.4.2": memErrorName
+  "1.3.6.1.4.1.2021.4.100": memSwapError
+  "1.3.6.1.4.1.2021.4.101": memSwapErrorMsg
+  "1.3.6.1.4.1.2021.9.1.2": dskPath
+  "1.3.6.1.4.1.2021.9.1.100": dskErrorFlag
+  "1.3.6.1.4.1.2021.9.1.101": dskErrorMsg
+  "1.3.6.1.4.1.2021.10.1.2": laNames
+  "1.3.6.1.4.1.2021.10.1.100": laErrorFlag
+  "1.3.6.1.4.1.2021.10.1.101": laErrMessage
+  "1.3.6.1.4.1.2021.2.1.2": prNames
+  "1.3.6.1.4.1.2021.2.1.100": prErrorFlag
+  "1.3.6.1.4.1.2021.2.1.101": prErrMessage
+  "1.3.6.1.2.1.2.2.1.1": ifIndex
+  "1.3.6.1.2.1.2.2.1.2": ifDescr
+  "1.3.6.1.2.1.2.2.1.7": ifAdminStatus
+  "1.3.6.1.2.1.2.2.1.8": ifOperStatus
+
+traps:
+  - oid: "1.3.6.1.4.1.14823.1.6.1.1.200.1001"
+    name: cppmLicenseExpiry
+    category: AAA/NAC
+    alarm_type: License Alert
+    severity: medium
+    create_ticket: true
+    title_tpl: "[CPPM][MEDIUM] {{vb.cppmNodeApplicationName}} license expires in {{vb.cppmLicenseDaysRemaining}} days on {{node.name}}"
+    recommended_action: "Renew/re-apply the license under Administration > Server Manager > Licensing."
+
+  - oid: "1.3.6.1.4.1.14823.1.6.1.1.200.1002"
+    name: cppmActivationExpiry
+    category: AAA/NAC
+    alarm_type: License Alert
+    severity: medium
+    create_ticket: true
+    title_tpl: "[CPPM][MEDIUM] {{vb.cppmNodeApplicationName}} activation expires in {{vb.cppmActivationDaysRemaining}} days on {{node.name}}"
+    recommended_action: "Activate the license online/offline before expiry."
+
+  - oid: "1.3.6.1.4.1.14823.1.6.1.1.200.1003"
+    name: cppmNodeCertExpiry
+    category: AAA/NAC
+    alarm_type: Security Alert
+    severity: medium          # engine escalates to high when cppmCertDaysRemaining <= 7
+    create_ticket: true
+    dedup_field: cppmNodeCertApplicationName
+    title_tpl: "[CPPM][CERT] {{vb.cppmNodeCertApplicationName}} certificate expires in {{vb.cppmCertDaysRemaining}} days on {{node.name}}"
+    recommended_action: "Renew the server certificate (HTTPS/RADIUS/RadSec) and update trust on NADs/supplicants if the CA changes."
+
+  - oid: "1.3.6.1.4.1.14823.1.6.1.1.200.1004"
+    name: cppmLowDiskSpace
+    category: AAA/NAC
+    alarm_type: Storage Threshold
+    severity: medium
+    create_ticket: true
+    title_tpl: "[CPPM][MEDIUM] Low disk space on {{node.name}}: {{vb.cppmDiskSpaceRemaining}} {{vb.cppmResourceUnit}} remaining"
+    recommended_action: "Run log cleanup (Cleanup Intervals), review Insight DB size and Access Tracker retention."
+
+  - oid: "1.3.6.1.4.1.14823.1.6.1.1.200.1005"
+    name: cppmLowMemory
+    category: AAA/NAC
+    alarm_type: Resource Threshold
+    severity: medium
+    create_ticket: true
+    title_tpl: "[CPPM][MEDIUM] Low memory on {{node.name}}: {{vb.cppmMemoryRemaining}} {{vb.cppmResourceUnit}} remaining"
+    recommended_action: "Check System Monitor for the consuming service; plan a restart in a maintenance window if the leak persists."
+
+  - oid: "1.3.6.1.4.1.14823.1.6.1.1.200.1006"
+    name: cppmClusterNodeAddNotification
+    category: AAA/NAC
+    alarm_type: Cluster Event
+    severity: info
+    create_ticket: false
+    title_tpl: "[CPPM][INFO] Node {{vb.cppmClusterServerIp}} added to cluster"
+
+  - oid: "1.3.6.1.4.1.14823.1.6.1.1.200.1007"
+    name: cppmClusterNodeDelNotification
+    category: AAA/NAC
+    alarm_type: Cluster Event
+    severity: high
+    create_ticket: true
+    title_tpl: "[CPPM][HIGH] Node {{vb.cppmClusterServerIp}} removed from cluster"
+    recommended_action: "Confirm the removal was planned (change record). If not, investigate immediately."
+
+  - oid: "1.3.6.1.4.1.14823.1.6.1.1.200.1008"
+    name: cppmClusterNodePromNotification
+    category: AAA/NAC
+    alarm_type: Cluster Event
+    severity: high
+    create_ticket: true
+    title_tpl: "[CPPM][HIGH] Node {{vb.cppmClusterServerIp}} promoted to Publisher"
+    recommended_action: "Verify publisher failover cause; check original publisher health and standby publisher config."
+
+  - oid: "1.3.6.1.4.1.14823.1.6.1.1.200.1009"
+    name: cppmClusterNodeDbldNotification
+    category: AAA/NAC
+    alarm_type: Cluster Event
+    severity: high
+    create_ticket: true
+    title_tpl: "[CPPM][HIGH] Cluster node {{vb.cppmClusterServerIp}} disabled"
+    recommended_action: "Check why the node was disabled and whether NADs still point to it."
+
+  - oid: "1.3.6.1.4.1.14823.1.6.1.1.200.1010"
+    name: cppmClusterNodeNSyncNotification
+    category: AAA/NAC
+    alarm_type: Replication Failure
+    severity: high
+    create_ticket: true
+    dedup_field: cppmClusterServerIp
+    title_tpl: "[CPPM][HIGH] Cluster node {{vb.cppmClusterServerIp}} out of sync for {{vb.cppmClusterOutOfSyncMinutes}} min"
+    recommended_action: "Check publisher<->subscriber reachability (TCP 443/5432), time sync, and replication status in Server Manager."
+
+  - oid: "1.3.6.1.4.1.14823.1.6.1.1.200.1011"
+    name: cppmClusterPwdChangeNotification
+    category: AAA/NAC
+    alarm_type: Audit
+    severity: info
+    create_ticket: false
+    title_tpl: "[CPPM][AUDIT] Cluster password changed"
+
+  - oid: "1.3.6.1.4.1.14823.1.6.1.1.200.1012"
+    name: cppmConfigReset
+    category: AAA/NAC
+    alarm_type: Security Alert
+    severity: high
+    create_ticket: true
+    title_tpl: "[CPPM][HIGH] Configuration RESET on {{node.name}}"
+    recommended_action: "Validate against change records; unplanned config reset is a security incident."
+
+  - oid: "1.3.6.1.4.1.14823.1.6.1.1.200.1013"
+    name: cppmConfigRestore
+    category: AAA/NAC
+    alarm_type: Config Change
+    severity: medium
+    create_ticket: true
+    title_tpl: "[CPPM][MEDIUM] Configuration restored on {{node.name}}"
+    recommended_action: "Validate against change records."
+
+  - oid: "1.3.6.1.4.1.14823.1.6.1.1.200.1014"
+    name: cppmUpdateNotification
+    category: AAA/NAC
+    alarm_type: System Event
+    severity: info              # engine raises to medium if cppmImageInstallStatus indicates failure
+    create_ticket: false
+    title_tpl: "[CPPM][INFO] Update {{vb.cppmImageFile}} on {{node.name}} status={{vb.cppmImageInstallStatus}}"
+
+  - oid: "1.3.6.1.4.1.14823.1.6.1.1.200.1015"
+    name: cppmUpgradeNotification
+    category: AAA/NAC
+    alarm_type: System Event
+    severity: info
+    create_ticket: false
+    title_tpl: "[CPPM][INFO] Upgrade {{vb.cppmImageFile}} on {{node.name}} status={{vb.cppmImageInstallStatus}}"
+
+  - oid: "1.3.6.1.4.1.14823.1.6.1.1.200.1016"
+    name: cppmClusterLicenseUsage
+    category: AAA/NAC
+    alarm_type: License Alert
+    severity: info              # engine raises to medium when usage/total >= 0.90
+    create_ticket: false
+    dedup_field: cppmNodeApplicationName
+    title_tpl: "[CPPM][LICENSE] {{vb.cppmNodeApplicationName}} usage {{vb.cppmClusterLicenseUsageCount}}/{{vb.cppmClusterLicenseTotalCount}}"
+
+  - oid: "1.3.6.1.4.1.14823.1.6.1.1.200.1017"
+    name: cppmServiceStopNotification
+    category: AAA/NAC
+    alarm_type: Application Failure
+    severity: high              # engine downgrades to medium for non-critical services
+    create_ticket: true
+    dedup_field: cppmServiceName
+    clear_oid: ["1.3.6.1.4.1.14823.1.6.1.1.200.1018", "1.3.6.1.4.1.14823.1.6.1.1.200.1019"]
+    clear_match_field: cppmServiceName
+    title_tpl: "[CPPM][HIGH] Service '{{vb.cppmServiceName}}' stopped on {{node.name}}"
+    recommended_action: "Administration > Server Manager > Server Configuration > Services Control: check and start the service; review Event Viewer."
+
+  - oid: "1.3.6.1.4.1.14823.1.6.1.1.200.1018"
+    name: cppmServiceStartNotification
+    category: AAA/NAC
+    alarm_type: Application Event
+    severity: info
+    create_ticket: false
+    is_clear: true
+    title_tpl: "[CPPM][INFO] Service '{{vb.cppmServiceName}}' started on {{node.name}}"
+
+  - oid: "1.3.6.1.4.1.14823.1.6.1.1.200.1019"
+    name: cppmServiceRestartNotification
+    category: AAA/NAC
+    alarm_type: Application Event
+    severity: info
+    create_ticket: false
+    is_clear: true
+    title_tpl: "[CPPM][INFO] Service '{{vb.cppmServiceName}}' restarted on {{node.name}}"
+
+  - oid: "1.3.6.1.4.1.14823.1.6.1.1.200.1021"
+    name: cppmHighCPULoadNotification
+    category: AAA/NAC
+    alarm_type: Resource Threshold
+    severity: medium
+    create_ticket: true
+    title_tpl: "[CPPM][MEDIUM] High CPU load on {{node.name}}: {{vb.cppmCPUAverageLoad}}"
+    recommended_action: "Check auth rate spike, Insight/report jobs, and per-service CPU in System Monitor."
+
+  - oid: "1.3.6.1.4.1.14823.1.6.1.1.200.1022"
+    name: cppmCoreDumpNotification
+    category: AAA/NAC
+    alarm_type: System Event
+    severity: high
+    create_ticket: true
+    title_tpl: "[CPPM][HIGH] Core dump generated on {{node.name}}"
+    recommended_action: "Collect logs (Collect Logs tool) and open a TAC case."
+
+  - oid: "1.3.6.1.4.1.14823.1.6.1.1.200.1023"
+    name: cppmClusterLicenseOverrun
+    category: AAA/NAC
+    alarm_type: License Alert
+    severity: high
+    create_ticket: true
+    dedup_field: cppmLicenseApplicationName
+    title_tpl: "[CPPM][HIGH] License overrun for {{vb.cppmLicenseApplicationName}} ({{vb.cppmLicenseOverrunDailyCount}} times today)"
+    recommended_action: "Add licenses or reduce consumption; overrun may block new authentications per licensing policy."
+
+  # Standard SNMPv2 traps
+  - oid: "1.3.6.1.6.3.1.1.5.1"
+    name: coldStart
+    category: AAA/NAC
+    alarm_type: System Event
+    severity: high
+    create_ticket: true
+    title_tpl: "[CPPM][HIGH] Reboot detected (coldStart) on {{node.name}}"
+    recommended_action: "Confirm planned vs unplanned reboot; verify all services are running after boot."
+
+  - oid: "1.3.6.1.6.3.1.1.5.2"
+    name: warmStart
+    category: AAA/NAC
+    alarm_type: System Event
+    severity: medium
+    create_ticket: true
+    title_tpl: "[CPPM][MEDIUM] SNMP agent restart (warmStart) on {{node.name}}"
+
+  # ---------------------------------------------------------------------------
+  # CPPM built-in watchdog: net-snmp DISMAN-EVENT-MIB triggers on UCD extTable /
+  # memory / disk / load / process checks. Pushed by CPPM (no polling needed).
+  # Observed on CPPM 6.14.1 (2026-11-17): ~20 checks incl. radius, tacacs, policy,
+  # dbcn, dbwrite, replication, postgresql, httpd, and the per-AD-domain
+  # "Domain Server [ cpass-domain-server@<DOMAIN>.service ]".
+  # Rising/Falling direction is NOT reliable on its own: the engine classifies each
+  # trap by mteHotValue + extOutput text ("is stopped|inactive|dead|failed" = failing,
+  # "is running|active (running)" = OK). Failing → service.down alert (same key as
+  # trap 1017 and the REST service poll); OK → clears it.
+  - oid: "1.3.6.1.2.1.88.2.0.1"
+    name: mteTriggerFired
+    category: AAA/NAC
+    alarm_type: Service Health (CPPM watchdog)
+    severity: medium
+    create_ticket: true
+    dedup_field: extNames
+    title_tpl: "{{vb.extOutput}}"
+    recommended_action: "Check the service in Administration > Server Manager > Server Configuration > Services Control; start it if stopped; check Event Viewer"
+
+  - oid: "1.3.6.1.2.1.88.2.0.2"
+    name: mteTriggerRising
+    category: AAA/NAC
+    alarm_type: Service Health (CPPM watchdog)
+    severity: medium
+    create_ticket: true
+    dedup_field: extNames
+    title_tpl: "{{vb.extOutput}}"
+    recommended_action: "Check the service in Administration > Server Manager > Server Configuration > Services Control; start it if stopped; check Event Viewer"
+
+  - oid: "1.3.6.1.2.1.88.2.0.3"
+    name: mteTriggerFalling
+    category: AAA/NAC
+    alarm_type: Service Health (CPPM watchdog)
+    severity: medium
+    create_ticket: true
+    dedup_field: extNames
+    title_tpl: "{{vb.extOutput}}"
+    recommended_action: "Check the service in Administration > Server Manager > Server Configuration > Services Control; start it if stopped; check Event Viewer"
+
+  # Link traps carry only ifIndex (no ifDescr) on CPPM; the one seen was docker0.
+  # Log-only (visible in Live Traps); the poller's interface errors cover real NIC problems.
+  - oid: "1.3.6.1.6.3.1.1.5.3"
+    name: linkDown
+    category: AAA/NAC
+    alarm_type: Interface Event
+    severity: low
+    create_ticket: false
+    dedup_field: ifIndex
+    clear_oid: ["1.3.6.1.6.3.1.1.5.4"]
+    clear_match_field: ifIndex
+    title_tpl: "[CPPM][LOW] Interface ifIndex {{vb.ifIndex}} down on {{node.name}}"
+
+  - oid: "1.3.6.1.6.3.1.1.5.4"
+    name: linkUp
+    category: AAA/NAC
+    alarm_type: Interface Event
+    severity: info
+    create_ticket: false
+    title_tpl: "[CPPM][INFO] Interface ifIndex {{vb.ifIndex}} up on {{node.name}}"
+
+  # net-snmp agent lifecycle (log-only; a real reboot is caught by coldStart + uptime)
+  - oid: "1.3.6.1.4.1.8072.4.0.1"
+    name: nsNotifyStart
+    category: AAA/NAC
+    alarm_type: System Event
+    severity: info
+    create_ticket: false
+    title_tpl: "[CPPM][INFO] SNMP agent started on {{node.name}}"
+
+  - oid: "1.3.6.1.4.1.8072.4.0.2"
+    name: nsNotifyShutdown
+    category: AAA/NAC
+    alarm_type: System Event
+    severity: info
+    create_ticket: false
+    title_tpl: "[CPPM][INFO] SNMP agent shutting down on {{node.name}}"
+
+  - oid: "1.3.6.1.4.1.8072.4.0.3"
+    name: nsNotifyRestart
+    category: AAA/NAC
+    alarm_type: System Event
+    severity: info
+    create_ticket: false
+    title_tpl: "[CPPM][INFO] SNMP agent restarted on {{node.name}}"

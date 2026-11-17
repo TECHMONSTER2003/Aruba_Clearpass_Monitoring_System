@@ -1,0 +1,26 @@
+[Unit]
+Description=CPPM Monitor - web UI (:8070)
+Documentation=file:///opt/cppmmon/docs/DESIGN.md
+After=network-online.target mysql.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=cppmmon
+Group=cppmmon
+EnvironmentFile=/etc/cppmmon/cppmmon.env
+WorkingDirectory=/opt/cppmmon
+ExecStart=/opt/cppmmon/venv/bin/gunicorn -w 2 -k gthread --threads 4 -b 0.0.0.0:8070 \
+    --timeout 60 --graceful-timeout 20 --access-logfile - --error-logfile - \
+    'cppmmon.web.app:create_app()'
+Restart=always
+RestartSec=5
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ReadWritePaths=/var/lib/cppmmon /var/log/cppmmon
+CapabilityBoundingSet=
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icon %}
+{% block title %}Trap Catalog{% endblock %}
+{% block page_title %}Trap Catalog{% endblock %}
+{% block page_sub %}OID → name, severity and ticket rules used to decode traps{% endblock %}
+
+{% block content %}
+{% set sevclass = {'critical': 'crit', 'high': 'crit', 'medium': 'warn', 'low': 'info', 'info': 'muted'} %}
+<div class="stack">
+  {% if current_user.is_admin %}
+  <section class="card">
+    <div class="card-h"><span class="sec-icon">{{ icon('book') }}</span><div><h2>Import trap database</h2><div class="sub">CSV or YAML (DESIGN §6.4). You'll see a diff before anything is written; existing entries are never deleted.</div></div></div>
+    <div class="card-b">
+      <form class="upload-row" method="post" action="{{ url_for('catalog.preview') }}" enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input class="input input-plain file-input" type="file" name="file" accept=".csv,.yaml,.yml" required>
+        <button class="btn btn-primary" type="submit">Preview changes</button>
+      </form>
+      <p class="field-help">CSV columns: <span class="mono">oid, name, category, alarm_type, severity, create_ticket, clear_oid, clear_match_field, dedup_field, title_tpl, description_tpl, recommended_action</span></p>
+    </div>
+  </section>
+  {% endif %}
+
+  <section class="card">
+    <div class="card-h"><h2>Traps</h2><span class="sub">{{ traps|length }} entries</span></div>
+    <div class="card-b flush table-scroll">
+      <table class="table">
+        <thead><tr><th>Name</th><th>OID</th><th>Severity</th><th>Ticket</th><th>Cleared by</th><th>Dedup on</th></tr></thead>
+        <tbody>
+        {% for t in traps %}
+          <tr>
+            <td><div class="cell-title">{{ t.name }}</div><div class="cell-sub">{{ t.alarm_type or '' }}</div></td>
+            <td class="mono">{{ t.oid }}</td>
+            <td><span class="pill {{ sevclass.get(t.severity, 'muted') }}">{{ t.severity }}</span></td>
+            <td>{{ 'Yes' if t.create_ticket else '—' }}</td>
+            <td>{% if t.clear_oid %}{% for c in t.clear_oid.split(',') %}<span class="tag">{{ names.get(c, c) }}</span>{% endfor %}<div class="cell-sub">match {{ t.clear_match_field or '—' }}</div>{% else %}—{% endif %}</td>
+            <td class="mono">{{ t.dedup_field or '—' }}</td>
+          </tr>
+        {% else %}
+          <tr><td colspan="6" class="muted">Catalog is empty. Run <span class="mono">sudo cppmmon-admin catalog-import /opt/cppmmon/catalog/cppm_traps.yaml --seed</span>.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-h"><h2>Varbind names</h2><span class="sub">{{ vbs|length }} prefixes</span></div>
+    <div class="card-b vb-grid">
+      {% for v in vbs %}<div class="vb-item"><b>{{ v.name }}</b><span class="mono">{{ v.oid_prefix }}</span></div>{% endfor %}
+    </div>
+  </section>
+</div>
+{% endblock %}

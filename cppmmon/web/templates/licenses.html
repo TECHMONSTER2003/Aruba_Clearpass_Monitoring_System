@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icon %}
+{% block title %}Licenses{% endblock %}
+{% block page_title %}Licenses{% endblock %}
+{% block page_sub %}Per node · REST /api/application-license (+ /summary) · every 6 h or Poll now{% endblock %}
+
+{% block content %}
+<div class="stack">
+  {% for n, rows, ts in nodes %}
+  <section class="card">
+    <div class="card-h">
+      <span class="sec-icon">{{ icon('book') }}</span>
+      <div><h2><a href="{{ url_for('nodes.overview', node_id=n.id) }}">{{ n.name }}</a></h2>
+        <div class="sub mono">{{ n.ip }} · {{ (n.role or 'unknown')|capitalize }}{% if ts %} · updated {{ ts | ago }}{% endif %}</div></div>
+      {% if can_edit and n.enabled and n.api_enabled %}
+      <div class="actions">
+        <form method="post" action="{{ url_for('nodes.poll_node', node_id=n.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="next" value="{{ url_for('main.licenses') }}">
+          <button class="btn btn-ghost btn-sm" type="submit">Poll now</button>
+        </form>
+      </div>
+      {% endif %}
+    </div>
+    <div class="card-b">{% with lic=rows %}{% include "_license_table.html" %}{% endwith %}</div>
+  </section>
+  {% else %}
+  <section class="card"><div class="card-b"><div class="empty slim"><div class="empty-art">{{ icon('book') }}</div><h3>No nodes with the REST API enabled</h3><p>Licenses are read over the CPPM REST API.</p></div></div></section>
+  {% endfor %}
+</div>
+{% endblock %}

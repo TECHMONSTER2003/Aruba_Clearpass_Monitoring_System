@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icon %}
+{% from "nodes/_fields.html" import text, secret, select, toggle %}
+{% set editing = node is not none %}
+{% set ro = editing and not can_edit %}
+{% block title %}{{ node.name if editing else 'Add node' }}{% endblock %}
+{% block page_title %}{{ node.name if editing else 'Add node' }}{% endblock %}
+{% block page_sub %}{% if editing %}<a href="{{ url_for('nodes.index') }}">Nodes</a> / {{ node.ip }}{% else %}<a href="{{ url_for('nodes.index') }}">Nodes</a> / new ClearPass node{% endif %}{% endblock %}
+
+{% block content %}
+<div class="node-layout">
+  <form id="node-form" method="post" novalidate
+        action="{{ url_for('nodes.edit', node_id=node.id) if editing else url_for('nodes.create') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    {% if editing %}<input type="hidden" name="node_id" value="{{ node.id }}">{% endif %}
+    {% if errors %}
+    <div class="alert crit form-alert" role="alert">{{ icon('alert') }}<span>Please fix the {{ errors|length }} highlighted field{{ 's' if errors|length > 1 }}.</span></div>
+    {% endif %}
+
+    <fieldset class="stack" {{ 'disabled' if ro }}>
+      <!-- General -->
+      <section class="card">
+        <div class="card-h"><span class="sec-icon">{{ icon('server') }}</span><div><h2>General</h2><div class="sub">How this node appears in the monitor</div></div></div>
+        <div class="card-b grid-form">
+          {{ text('name', 'Display name', v, errors, placeholder='cppm-pub-01', required=True) }}
+          {{ text('ip', 'Management IP', v, errors, placeholder='10.10.10.5', mono=True, required=True, help='Used for ICMP, SNMP and HTTPS, and to match incoming traps/syslog.') }}
+          {{ text('site', 'Site / cluster', v, errors, placeholder='DC1 · Lab') }}
+        </div>
+        <div class="card-b" style="padding-top:0">
+          <input type="hidden" name="enabled_present" value="1">
+          {{ toggle('enabled', 'Polling enabled', v.get('enabled', true), help='When paused, the node is not polled, but its traps and syslog are still received and matched.') }}
+          <div class="grid-form">
+            {% set mu = v.get('maintenance_until') %}
+            <div class="field {{ 'has-error' if errors.get('maintenance_until') }}">
+              <label for="f-maintenance_until">Maintenance until ({{ tz_label }})</label>
+              <input class="input input-plain" id="f-maintenance_until" name="maintenance_until" type="datetime-local"
+                     value="{{ (mu | localtime('%Y-%m-%dT%H:%M')) if mu and mu.__class__.__name__ == 'datetime' else '' }}">
+              {% if errors.get('maintenance_until') %}<div class="field-error">{{ errors['maintenance_until'] }}</div>
+              {% else %}<div class="field-help">Until then, alerts are recorded as suppressed and no tickets are created. Clear the field to end it.</div>{% endif %}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SNMP polling -->
+      <section class="card">
+        <div class="card-h"><span class="sec-icon">{{ icon('activity') }}</span><div><h2>SNMP polling</h2><div class="sub">Must match CPPM › Server Configuration › System Monitor</div></div></div>
+        <div class="card-b">
+          <div class="grid-form">
+            <div class="field">
+              <label>Version</label>
+              <div class="segmented" role="radiogroup" aria-label="SNMP version">
+                <label><input type="radio" name="snmp_version" value="2c" {{ 'checked' if v.get('snmp_version') != '3' }} data-toggle-group="snmpver"><span>v2c</span></label>
+                <label><input type="radio" name="snmp_version" value="3" {{ 'checked' if v.get('snmp_version') == '3' }} data-toggle-group="snmpver"><span>v3</span></label>
+              </div>
+            </div>
+            {{ text('snmp_port', 'UDP port', v, errors, mono=True) }}
+          </div>
+          <div class="grid-form" data-show-when="snmpver=2c">
+            {{ secret('snmp_community', 'Community', 'snmp_community_enc', node, errors, required=True, help='Read-only community configured on CPPM.') }}
+          </div>
+          <div class="grid-form" data-show-when="snmpver=3">
+            {{ text('snmp_v3_user', 'Username', v, errors, required=True, mono=True) }}
+            <div></div>
+            {{ select('snmp_v3_auth_proto', 'Auth protocol', v, errors, auth_protos.keys(), none_label='None (noAuthNoPriv)') }}
+            {{ secret('snmp_v3_auth_key', 'Auth key', 'snmp_v3_auth_key_enc', node, errors) }}
+            {{ select('snmp_v3_priv_proto', 'Privacy protocol', v, errors, priv_protos.keys(), none_label='None (authNoPriv)') }}
+            {{ secret('snmp_v3_priv_key', 'Privacy key', 'snmp_v3_priv_key_enc', node, errors) }}
+          </div>
+        </div>
+      </section>
+
+      <!-- Traps -->
+      <section class="card">
+        <div class="card-h"><span class="sec-icon">{{ icon('radio') }}</span><div><h2>SNMP traps</h2><div class="sub">Community CPPM uses when sending traps to this monitor (UDP/162)</div></div></div>
+        <div class="card-b grid-form">
+          {{ secret('trap_community', 'Trap community', 'trap_community_enc', node, errors, help='May differ from the polling community. Traps with any other community are stored but never alerted on.') }}
+        </div>
+      </section>
+
+      <!-- API -->
+      <section class="card">
+        <div class="card-h"><span class="sec-icon">{{ icon('shield') }}</span><div><h2>REST API</h2><div class="sub">Guest › Administration › API Services › API Clients (read-only operator profile)</div></div></div>
+        <div class="card-b">
+          {{ toggle('api_enabled', 'Enable REST API checks', v.get('api_enabled'), help='Service status, certificates, licenses and endpoint counts.', data='data-toggle-group="api"') }}
+          <div data-show-when="api=on" class="api-fields">
+            <div class="grid-form">
+              <div class="field">
+                <label>Grant type</label>
+                <div class="segmented" role="radiogroup" aria-label="OAuth grant type">
+                  <label><input type="radio" name="api_grant_type" value="client_credentials" {{ 'checked' if v.get('api_grant_type') != 'password' }} data-toggle-group="grant"><span>Client credentials</span></label>
+                  <label><input type="radio" name="api_grant_type" value="password" {{ 'checked' if v.get('api_grant_type') == 'password' }} data-toggle-group="grant"><span>Password</span></label>
+                </div>
+              </div>
+              {{ text('api_client_id', 'Client ID', v, errors, required=True, mono=True) }}
+            </div>
+            <div class="grid-form">
+              {{ secret('api_client_secret', 'Client secret', 'api_client_secret_enc', node, errors, help='Leave empty for a public client using the password grant.') }}
+            </div>
+            <div class="grid-form" data-show-when="grant=password">
+              {{ text('api_username', 'Username', v, errors, required=True, mono=True, autocomplete='off') }}
+              {{ secret('api_password', 'Password', 'api_password_enc', node, errors, required=True) }}
+            </div>
+            {{ toggle('api_verify_tls', 'Verify TLS certificate', v.get('api_verify_tls'), help='Keep on in production. Lab CPPMs are usually self-signed.', data='data-toggle-group="tls"') }}
+            <div class="alert warn" data-show-when="tls=off">{{ icon('alert') }}<span>TLS verification is <b>off</b>: the monitor will accept any certificate from this node. Acceptable for the lab only.</span></div>
+          </div>
+        </div>
+      </section>
+
+      {% if not ro %}
+      <div class="form-actions">
+        <a class="btn btn-ghost" href="{{ url_for('nodes.index') }}">Cancel</a>
+        <button type="submit" class="btn btn-primary">{{ 'Save changes' if editing else 'Save node' }}</button>
+      </div>
+      {% endif %}
+    </fieldset>
+  </form>
+
+  <aside class="node-side">
+    <section class="card sticky">
+      <div class="card-h">
+        <span class="sec-icon">{{ icon('check') }}</span>
+        <div><h2>Test connection</h2><div class="sub">ICMP · SNMP · API from this monitor</div></div>
+      </div>
+      <div class="card-b">
+        {% if not ro %}
+        <button type="button" class="btn btn-primary btn-block" id="test-btn"
+                hx-post="{{ url_for('nodes.test_draft') }}" hx-include="#node-form" hx-target="#test-results"
+                hx-indicator="#test-btn" hx-disabled-elt="this"
+                {% if autotest %}hx-trigger="click, load"{% endif %}>
+          <span class="btn-label">Run test</span><span class="spinner" aria-hidden="true"></span>
+        </button>
+        <p class="field-help center">Uses the values in the form, including unsaved changes.</p>
+        {% endif %}
+        <div id="test-results" aria-live="polite">
+          {% if state and state.last_test %}
+            {% with checks=state.last_test.checks, at=state.last_test.at, fresh=False, error=None %}{% include "nodes/_test_results.html" %}{% endwith %}
+          {% elif not autotest %}
+            <div class="test-empty">{{ icon('activity', 'icon-lg') }}<span>No test run yet.</span></div>
+          {% endif %}
+        </div>
+      </div>
+    </section>
+
+    {% if editing and state and (state.hostname or state.version) %}
+    <section class="card">
+      <div class="card-h"><h2>Discovered</h2><span class="sub">from the last successful SNMP test</span></div>
+      <div class="card-b">
+        <dl class="kv">
+          <dt>Hostname</dt><dd>{{ state.hostname or '—' }}</dd>
+          <dt>Version</dt><dd>{{ state.version or '—' }}</dd>
+          <dt>Model</dt><dd>{{ state.model or '—' }}</dd>
+          <dt>Serial</dt><dd class="mono">{{ state.serial or '—' }}</dd>
+          <dt>Node type</dt><dd>{{ state.node_type or '—' }}</dd>
+          <dt>CPPM index</dt><dd class="mono">{{ state.sys_index if state.sys_index is not none else '—' }}</dd>
+        </dl>
+      </div>
+    </section>
+    {% endif %}
+
+    {% if editing and current_user.is_admin %}
+    <section class="card danger-card">
+      <div class="card-h"><h2>Delete node</h2></div>
+      <div class="card-b">
+        <p class="field-help">Stops monitoring this node. Stored traps, syslog and metrics are kept. Type <b>{{ node.name }}</b> to confirm.</p>
+        <form method="post" action="{{ url_for('nodes.delete', node_id=node.id) }}" class="danger-form">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input class="input input-plain" name="confirm" autocomplete="off" placeholder="{{ node.name }}" aria-label="Type the node name to confirm">
+          <button type="submit" class="btn btn-danger">Delete</button>
+        </form>
+      </div>
+    </section>
+    {% endif %}
+  </aside>
+</div>
+{% endblock %}

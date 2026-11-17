@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icon %}
+{% block title %}{{ t.ticket_no }}{% endblock %}
+{% block page_title %}{{ t.ticket_no }}{% endblock %}
+{% block page_sub %}<a href="{{ url_for('alerts.tickets') }}">Tickets</a> / {{ t.priority }} · {{ t.status }}{% endblock %}
+
+{% block content %}
+<section class="card">
+  <div class="card-h">
+    <h2 class="wrap">{{ t.short_description }}</h2>
+    <div class="actions">
+      <button type="button" class="btn btn-ghost" data-copy="ticket-body">Copy text</button>
+      <a class="btn btn-primary" href="{{ url_for('alerts.ticket_download', ticket_no=t.ticket_no) }}">{{ icon('download', 'icon-sm') }} Download .txt</a>
+    </div>
+  </div>
+  <div class="card-b"><pre class="raw-msg ticket-text" id="ticket-body">{{ body }}</pre>
+    <p class="field-help mono">{{ t.file_path }}</p></div>
+</section>
+{% endblock %}

@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}Health{% endblock %}
+{% block page_title %}Health{% endblock %}
+{% block page_sub %}Monitor services, ingest, decisioning, polling and storage · refreshes every 15 s{% endblock %}
+
+{% block content %}
+<div id="health-body" class="stack" hx-get="{{ url_for('main.health_body') }}" hx-trigger="every 15s" hx-swap="innerHTML">
+  {% include "_health_body.html" %}
+</div>
+{% endblock %}

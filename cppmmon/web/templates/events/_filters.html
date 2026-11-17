@@ -1,0 +1,18 @@
+{% from "_macros.html" import icon %}
+{% macro filters(endpoint, f, nodes, kinds, placeholder) -%}
+<form class="filter-bar" method="get" action="{{ url_for(endpoint) }}">
+  <div class="input-wrap filter-q">
+    <svg class="icon" aria-hidden="true"><use href="#i-search"/></svg>
+    <input class="input" type="search" name="q" value="{{ f.q }}" placeholder="{{ placeholder }}" aria-label="Search">
+  </div>
+  <select class="input input-plain select" name="node" aria-label="Node">
+    <option value="">All nodes</option>
+    {% for nid, name in nodes.items() %}<option value="{{ nid }}" {{ 'selected' if f.node == nid }}>{{ name }}</option>{% endfor %}
+  </select>
+  <select class="input input-plain select" name="kind" aria-label="Type">
+    {% for val, label in kinds %}<option value="{{ val }}" {{ 'selected' if f.kind == val }}>{{ label }}</option>{% endfor %}
+  </select>
+  <button class="btn btn-ghost" type="submit">Apply</button>
+  {% if f.q or f.node or f.kind %}<a class="btn btn-ghost" href="{{ url_for(endpoint) }}">Clear</a>{% endif %}
+</form>
+{%- endmacro %}

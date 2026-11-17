@@ -1,0 +1,24 @@
+[Unit]
+Description=CPPM Monitor - poller (ICMP / SNMP / REST + thresholds)
+Documentation=file:///opt/cppmmon/docs/DESIGN.md
+After=network-online.target mysql.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=cppmmon
+Group=cppmmon
+EnvironmentFile=/etc/cppmmon/cppmmon.env
+WorkingDirectory=/opt/cppmmon
+ExecStart=/opt/cppmmon/venv/bin/python -m cppmmon.poller.main
+Restart=always
+RestartSec=5
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ReadWritePaths=/var/lib/cppmmon /var/log/cppmmon
+CapabilityBoundingSet=
+
+[Install]
+WantedBy=multi-user.target

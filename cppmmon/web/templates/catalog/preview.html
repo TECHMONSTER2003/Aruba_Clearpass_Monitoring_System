@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icon %}
+{% block title %}Catalog import preview{% endblock %}
+{% block page_title %}Import preview{% endblock %}
+{% block page_sub %}<a href="{{ url_for('catalog.index') }}">Trap Catalog</a> / {{ filename }}{% endblock %}
+
+{% block content %}
+<div class="stack">
+  <section class="grid grid-4">
+    <div class="card stat"><span class="stat-icon ok">{{ icon('plus', 'icon-lg') }}</span><div><div class="stat-label">Added</div><div class="stat-value">{{ d.added|length }}</div></div></div>
+    <div class="card stat"><span class="stat-icon blue">{{ icon('sliders', 'icon-lg') }}</span><div><div class="stat-label">Changed</div><div class="stat-value">{{ d.changed|length }}</div></div></div>
+    <div class="card stat"><span class="stat-icon lime">{{ icon('check', 'icon-lg') }}</span><div><div class="stat-label">Unchanged</div><div class="stat-value">{{ d.unchanged|length }}</div></div></div>
+    <div class="card stat"><span class="stat-icon crit">{{ icon('info', 'icon-lg') }}</span><div><div class="stat-label">Kept, not in file</div><div class="stat-value">{{ d.untouched|length }}</div></div></div>
+  </section>
+
+  {% if pc.errors %}
+  <div class="alert warn">{{ icon('alert') }}<div><b>{{ pc.errors|length }} row(s) skipped</b><ul class="err-list">{% for e in pc.errors[:30] %}<li>{{ e }}</li>{% endfor %}</ul></div></div>
+  {% endif %}
+
+  {% if d.added %}
+  <section class="card"><div class="card-h"><h2>Added</h2></div><div class="card-b flush table-scroll">
+    <table class="table"><thead><tr><th>Name</th><th>OID</th><th>Severity</th><th>Ticket</th></tr></thead><tbody>
+    {% for a in d.added %}<tr><td>{{ a.name }}</td><td class="mono">{{ a.oid }}</td><td>{{ a.severity }}</td><td>{{ 'Yes' if a.create_ticket else '—' }}</td></tr>{% endfor %}
+    </tbody></table></div></section>
+  {% endif %}
+
+  {% if d.changed %}
+  <section class="card"><div class="card-h"><h2>Changed</h2></div><div class="card-b flush table-scroll">
+    <table class="table"><thead><tr><th>Name / OID</th><th>Field</th><th>Current</th><th>New</th></tr></thead><tbody>
+    {% for c in d.changed %}{% for fld, pair in c.fields.items() %}
+      <tr>{% if loop.first %}<td rowspan="{{ c.fields|length }}"><div class="cell-title">{{ c.name }}</div><div class="cell-sub mono">{{ c.oid }}</div></td>{% endif %}
+      <td class="mono">{{ fld }}</td><td class="diff-old">{{ pair[0] if pair[0] is not none else '—' }}</td><td class="diff-new">{{ pair[1] if pair[1] is not none else '—' }}</td></tr>
+    {% endfor %}{% endfor %}
+    </tbody></table></div></section>
+  {% endif %}
+
+  {% if d.untouched %}
+  <section class="card"><div class="card-h"><h2>Kept (not in this file)</h2><span class="sub">Existing entries are never deleted by an import</span></div>
+    <div class="card-b">{% for u in d.untouched %}<span class="tag">{{ u.name }}</span>{% endfor %}</div></section>
+  {% endif %}
+
+  <div class="form-actions">
+    <a class="btn btn-ghost" href="{{ url_for('catalog.index') }}">Cancel</a>
+    <form method="post" action="{{ url_for('catalog.apply') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="token" value="{{ token }}">
+      <button class="btn btn-primary" type="submit" {{ 'disabled' if not (d.added or d.changed or d.vb_added or d.vb_changed) }}>Apply {{ d.added|length + d.changed|length }} change(s)</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

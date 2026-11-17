@@ -1,0 +1,46 @@
+{% from "_macros.html" import icon %}
+{% for t in rows %}
+{% set vb = (t.varbinds or {}).get('list', []) %}
+<tr class="ev-row {{ 'ev-unknown' if not t.trap_name }} {{ 'ev-bad' if not t.community_ok }}" data-expand="tr-{{ t.id }}">
+  <td class="mono nowrap">{{ t.received_at | localtime('%d %b %H:%M:%S') }}</td>
+  <td>
+    {% if t.node_id %}<div class="cell-title">{{ nodes.get(t.node_id, '#' ~ t.node_id) }}</div>
+    {% else %}<span class="pill warn">Unregistered</span>{% endif %}
+    <div class="cell-sub mono">{{ t.src_ip }}{% if (t.varbinds or {}).get('resolved_via') == 'cppmNodeIp' %} · via cppmNodeIp{% endif %}</div>
+  </td>
+  <td>
+    {% if t.trap_name %}<div class="cell-title">{{ t.trap_name }}</div>
+    {% else %}<span class="pill info">UNKNOWN_TRAP</span>{% endif %}
+    <div class="cell-sub mono">{{ t.trap_oid or '—' }}</div>
+  </td>
+  <td class="ev-vb">
+    {% for v in vb[:3] if not v.name.startswith('1.') %}<span class="kvchip"><b>{{ v.name }}</b> {{ v.value | string | truncate(48, true, '…') }}</span>{% endfor %}
+  </td>
+  <td class="nowrap">
+    {% if t.community_ok %}<span class="pill ok">v{{ t.snmp_version }}</span>
+    {% else %}<span class="pill crit" title="Community not configured on any node: stored, no event">community</span>{% endif %}
+  </td>
+  <td class="num"><button type="button" class="icon-btn sm" aria-label="Show varbinds">{{ icon('chevron', 'icon-sm') }}</button></td>
+</tr>
+<tr class="ev-detail" id="tr-{{ t.id }}" hidden>
+  <td colspan="6">
+    <div class="detail-grid">
+      <table class="table mini">
+        <thead><tr><th>Varbind</th><th>OID</th><th>Value</th></tr></thead>
+        <tbody>
+        {% for v in vb %}<tr><td>{{ v.name }}</td><td class="mono">{{ v.oid }}</td><td class="mono wrap">{{ v.value }}</td></tr>
+        {% else %}<tr><td colspan="3" class="muted">No varbinds</td></tr>{% endfor %}
+        </tbody>
+      </table>
+      <dl class="kv">
+        <dt>Raw trap ID</dt><dd class="mono">{{ t.id }}</dd>
+        <dt>Received ({{ tz_label }})</dt><dd class="mono">{{ t.received_at | localtime('%d %b %Y %H:%M:%S') }}</dd>
+        <dt>SNMP</dt><dd>v{{ t.snmp_version }}{% if (t.varbinds or {}).get('agent_addr') %} · agent {{ t.varbinds.agent_addr }}{% endif %}</dd>
+        <dt>Agent uptime</dt><dd class="mono">{{ ((t.varbinds or {}).get('uptime_ticks') or 0) // 100 }} s</dd>
+        <dt>Sender</dt><dd>{{ (t.varbinds or {}).get('resolved_via', '—') }}</dd>
+        <dt>Community</dt><dd>{{ 'accepted' if t.community_ok else 'not accepted (no event created)' }}</dd>
+      </dl>
+    </div>
+  </td>
+</tr>
+{% endfor %}

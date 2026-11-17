@@ -1,0 +1,30 @@
+{% from "_macros.html" import icon %}
+{% set sevnames = ['emerg', 'alert', 'crit', 'err', 'warning', 'notice', 'info', 'debug'] %}
+{% for m in rows %}
+<tr class="ev-row" data-expand="sl-{{ m.id }}">
+  <td class="mono nowrap">{{ m.received_at | localtime('%d %b %H:%M:%S') }}</td>
+  <td>
+    {% if m.node_id %}<div class="cell-title">{{ nodes.get(m.node_id, '#' ~ m.node_id) }}</div>
+    {% else %}<span class="pill warn">Unregistered</span>{% endif %}
+    <div class="cell-sub mono">{{ m.src_ip }} · {{ m.transport }}</div>
+  </td>
+  <td class="nowrap"><span class="tag fmt-{{ m.fmt }}">{{ m.fmt }}</span>{% if m.truncated %}<span class="tag tag-warn" title="Message exceeded 64 KB and was truncated">trunc</span>{% endif %}</td>
+  <td class="nowrap">{% if m.severity is not none %}<span class="pill {{ 'crit' if m.severity <= 3 else ('warn' if m.severity == 4 else 'muted') }}">{{ sevnames[m.severity] }}</span>{% else %}—{% endif %}</td>
+  <td class="mono msg-cell">{{ m.msg | truncate(220, true, '…') }}</td>
+  <td class="num"><button type="button" class="icon-btn sm" aria-label="Show full message">{{ icon('chevron', 'icon-sm') }}</button></td>
+</tr>
+<tr class="ev-detail" id="sl-{{ m.id }}" hidden>
+  <td colspan="6">
+    <div class="detail-grid">
+      <pre class="raw-msg">{{ m.msg }}</pre>
+      <dl class="kv">
+        <dt>Raw ID</dt><dd class="mono">{{ m.id }}</dd>
+        <dt>Facility</dt><dd>{{ m.facility if m.facility is not none else '—' }}</dd>
+        <dt>Host / app</dt><dd>{{ m.host or '—' }} / {{ m.app or '—' }}</dd>
+        <dt>Device time</dt><dd class="mono">{{ (m.parsed or {}).get('device_ts') or '—' }}</dd>
+        <dt>Envelope</dt><dd>{{ (m.parsed or {}).get('envelope') or 'none' }}</dd>
+      </dl>
+    </div>
+  </td>
+</tr>
+{% endfor %}

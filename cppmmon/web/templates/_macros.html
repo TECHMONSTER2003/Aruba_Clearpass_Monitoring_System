@@ -1,0 +1,22 @@
+{% macro icon(name, cls='') -%}
+<svg class="icon {{ cls }}" aria-hidden="true"><use href="#i-{{ name }}"/></svg>
+{%- endmacro %}
+
+{% macro nav_item(endpoint, label, icon_name, key, active, phase=None) -%}
+{% if phase %}
+<span class="nav-item disabled" title="{{ label }} — available from Phase {{ phase }}" aria-disabled="true">
+  {{ icon(icon_name) }}<span>{{ label }}</span><em class="nav-tag">P{{ phase }}</em>
+</span>
+{% else %}
+<a class="nav-item {{ 'active' if active == key }}" href="{{ url_for(endpoint) }}" title="{{ label }}" {% if active == key %}aria-current="page"{% endif %}>
+  {{ icon(icon_name) }}<span>{{ label }}</span>
+</a>
+{% endif %}
+{%- endmacro %}
+
+{% macro theme_toggle(cls='icon-btn') -%}
+<button type="button" class="{{ cls }}" data-theme-toggle aria-label="Toggle light / dark theme" title="Toggle theme">
+  <svg class="icon icon-sun" aria-hidden="true"><use href="#i-sun"/></svg>
+  <svg class="icon icon-moon" aria-hidden="true"><use href="#i-moon"/></svg>
+</button>
+{%- endmacro %}

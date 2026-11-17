@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icon %}
+{% block title %}Thresholds{% endblock %}
+{% block page_title %}Thresholds{% endblock %}
+{% block page_sub %}Open after the sustain window · clear only past the clear value (hysteresis){% endblock %}
+
+{% block content %}
+<form method="post" action="{{ url_for('alerts.thresholds') }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <section class="card">
+    <div class="card-h"><span class="sec-icon">{{ icon('sliders') }}</span>
+      <div><h2>Threshold rules</h2><div class="sub">Warning → Medium, Critical → High (expired server certificate → Critical). Changes apply within 60 s.</div></div>
+      {% if can_edit %}<div class="actions"><button class="btn btn-primary" type="submit">Save changes</button></div>{% endif %}
+    </div>
+    <div class="card-b flush table-scroll">
+      <table class="table thr-table">
+        <thead><tr><th>Rule</th><th>Metric</th><th>Op</th><th>Warning</th><th>Critical</th><th>Clear</th><th>Sustain (s)</th><th>Enabled</th></tr></thead>
+        <tbody>
+        {% for r in rules %}{% set p = r.rule_id ~ '__' %}
+          <tr class="{{ 'has-error' if errors.get(r.rule_id) }}">
+            <td><b>{{ r.rule_id }}</b>{% if errors.get(r.rule_id) %}<div class="field-error">{{ errors[r.rule_id] }}</div>{% endif %}
+              <input type="hidden" name="{{ p }}present" value="1"></td>
+            <td class="mono">{{ r.metric }}</td>
+            <td class="mono">{{ r.op }}</td>
+            {% for k in ('warn_value', 'crit_value', 'clear_value') %}
+            <td><input class="input input-plain num-input" name="{{ p ~ k }}" inputmode="decimal" value="{{ '%g'|format(r[k]) if r[k] is not none else '' }}" {{ 'disabled' if not can_edit }} aria-label="{{ r.rule_id }} {{ k }}"></td>
+            {% endfor %}
+            <td><input class="input input-plain num-input" name="{{ p }}sustain_s" inputmode="numeric" value="{{ r.sustain_s }}" {{ 'disabled' if not can_edit }} aria-label="{{ r.rule_id }} sustain"></td>
+            <td><label class="switch"><input type="checkbox" name="{{ p }}enabled" {{ 'checked' if r.enabled }} {{ 'disabled' if not can_edit }}><span class="slider"></span></label></td>
+          </tr>
+        {% else %}
+          <tr><td colspan="8" class="muted">No rules yet: the poller seeds the defaults on its first start.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</form>
+{% endblock %}

@@ -1,0 +1,34 @@
+{% from "_macros.html" import icon %}
+{% from "_tile.html" import tile %}
+{% for c in summary.undiscovered %}
+<div class="alert info discover-banner">{{ icon('server') }}
+  <span>The cluster of <b>{{ c.via.name }}</b> reports <b>{{ c.members }}</b> members but only <b>{{ c.monitored }}</b> are monitored.</span>
+  <a class="btn btn-primary btn-sm" href="{{ url_for('nodes.discover', node_id=c.via.id) }}">Discover members</a>
+</div>
+{% endfor %}
+{% if not db_ok %}
+<div class="alert crit" role="alert">{{ icon('alert') }}<span>The database is unreachable. Figures may be incomplete. Check <span class="mono">systemctl status mysql</span>.</span></div>
+{% endif %}
+<section class="grid grid-4" aria-label="Summary">
+  <div class="card stat">
+    <span class="stat-icon blue">{{ icon('server', 'icon-lg') }}</span>
+    <div><div class="stat-label">Monitored nodes</div><div class="stat-value">{{ summary.nodes }}</div></div>
+  </div>
+  <div class="card stat">
+    <span class="stat-icon ok">{{ icon('check', 'icon-lg') }}</span>
+    <div><div class="stat-label">Up</div><div class="stat-value">{{ summary.up }}</div></div>
+  </div>
+  <div class="card stat">
+    <span class="stat-icon crit">{{ icon('alert', 'icon-lg') }}</span>
+    <div><div class="stat-label">Down / degraded</div><div class="stat-value">{{ summary.down }}</div></div>
+  </div>
+  <div class="card stat">
+    <span class="stat-icon lime">{{ icon('bell', 'icon-lg') }}</span>
+    <div><div class="stat-label">Open alerts</div><div class="stat-value">{{ summary.open_alerts }}</div></div>
+  </div>
+</section>
+{% if tiles %}
+<section class="kpi-tiles" aria-label="Nodes">
+  {% for t in tiles %}{{ tile(t) }}{% endfor %}
+</section>
+{% endif %}

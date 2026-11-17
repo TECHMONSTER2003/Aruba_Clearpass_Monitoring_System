@@ -1,0 +1,19 @@
+{% if not db_ok %}
+<tr><td colspan="6"><span class="pill crit">Database unreachable</span></td></tr>
+{% endif %}
+{% for r in rows %}
+<tr>
+  <td><b>cppmmon-{{ r.name }}</b></td>
+  <td>
+    {% if r.state == 'ok' %}<span class="pill ok">Running</span>
+    {% elif r.state == 'stale' %}<span class="pill crit">No heartbeat</span>
+    {% else %}<span class="pill muted">Not seen</span>{% endif %}
+  </td>
+  <td>{% if r.name == 'web' %}<span class="muted">serving this page</span>{% else %}{{ r.beat.last_beat | ago if r.beat else '—' }}{% endif %}</td>
+  <td class="mono">{{ r.beat.started_at | localtime if r.beat else '—' }}</td>
+  <td class="mono">{{ r.beat.pid if r.beat and r.beat.pid else '—' }}</td>
+  <td class="mono muted">
+    {% if r.beat and r.beat.stats %}{% for k, v in r.beat.stats.items() %}{{ k }}={{ v }}{% if not loop.last %} · {% endif %}{% endfor %}{% else %}—{% endif %}
+  </td>
+</tr>
+{% endfor %}

@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icon %}
+{% from "_tile.html" import tile, status_pill %}
+{% block title %}{{ t.node.name }}{% endblock %}
+{% block page_title %}{{ t.node.name }}{% endblock %}
+{% block page_sub %}<a href="{{ url_for('nodes.index') }}">Nodes</a> / {{ t.node.ip }} · overview{% endblock %}
+
+{% block content %}
+{% set n = t.node %}
+<div class="stack">
+  <div class="ov-head">
+    <div class="ov-tile">{{ tile(t) }}</div>
+    <div class="ov-actions">
+      <div class="seg-links" role="group" aria-label="Time range">
+        {% for h, label in [(1, '1h'), (6, '6h'), (24, '24h'), (72, '3d'), (168, '7d')] %}
+        <a class="{{ 'on' if hours == h }}" href="{{ url_for('nodes.overview', node_id=n.id, hours=h) }}">{{ label }}</a>
+        {% endfor %}
+      </div>
+      <div class="btn-row">
+      {% if current_user.role in ('admin', 'operator') and n.enabled %}
+      <form method="post" action="{{ url_for('nodes.poll_node', node_id=n.id) }}" class="inline-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="next" value="{{ url_for('nodes.overview', node_id=n.id, hours=hours) }}">
+        <button class="btn btn-primary" type="submit" title="Run every poll job for this node now">{{ icon('activity', 'icon-sm') }} Poll now</button>
+      </form>
+      {% endif %}
+      <a class="btn btn-ghost" href="{{ url_for('nodes.edit', node_id=n.id) }}">{{ icon('sliders', 'icon-sm') }} Settings &amp; test</a>
+      {% if n.api_enabled %}<a class="btn btn-ghost" href="{{ url_for('nodes.discover', node_id=n.id) }}">{{ icon('server', 'icon-sm') }} Discover cluster</a>{% endif %}
+      </div>
+    </div>
+  </div>
+
+  {% if alerts %}
+  <section class="card">
+    <div class="card-h"><h2>Open alerts</h2><span class="sub">{{ alerts|length }}</span></div>
+    <div class="card-b flush table-scroll"><table class="table">
+      <thead><tr><th>Severity</th><th>Alert</th><th>Since ({{ tz_label }})</th><th class="num">Count</th></tr></thead>
+      <tbody>{% for a in alerts %}<tr><td><span class="pill {{ {'critical':'crit','high':'crit','medium':'warn'}.get(a.severity,'info') }}">{{ a.severity }}</span></td>
+        <td>{{ a.title }}</td><td class="mono">{{ a.first_seen | localtime('%d %b %H:%M') }}</td><td class="num">{{ a.occurrences }}</td></tr>{% endfor %}</tbody>
+    </table></div>
+  </section>
+  {% endif %}
+
+  <section class="chart-grid">
+    {% for key, title, sub in [('res', 'CPU · Memory · Disk', '%'), ('auth', 'Authentications', 'per minute, total vs failed'),
+                               ('icmp', 'ICMP round-trip', 'ms'), ('authsrc', 'Auth source failures', 'per minute, top sources'),
+                               ('net', 'Interface throughput', 'bits/s')] %}
+    <div class="card chart-card {{ 'wide' if key == 'res' }}">
+      <div class="card-h"><h2>{{ title }}</h2><span class="sub">{{ sub }}</span></div>
+      <div class="card-b"><div class="chart-box"><canvas data-chart="{{ url_for('nodes.series_json', node_id=n.id, chart=key, hours=hours) }}"
+           data-tz="{{ display_tz }}" data-hours="{{ hours }}" aria-label="{{ title }} chart"></canvas>
+        <div class="chart-empty" hidden>No samples in this range yet.</div></div></div>
+    </div>
+    {% endfor %}
+  </section>
+
+  <div class="two-col">
+    <section class="card">
+      <div class="card-h"><h2>Services</h2><span class="sub">REST · every 2 min</span></div>
+      <div class="card-b flush table-scroll"><table class="table compact">
+        <thead><tr><th>Service</th><th>State</th><th>Checked</th></tr></thead>
+        <tbody>{% for s in services %}
+          <tr><td>{{ s.service_name }}</td>
+          <td><span class="pill {{ 'ok' if (s.status or '')|lower == 'running' else 'crit' }}">{{ s.status }}</span></td>
+          <td class="muted">{{ s.ts | ago }}</td></tr>
+        {% else %}<tr><td colspan="3" class="muted">{{ 'API disabled for this node.' if not n.api_enabled else 'Not polled yet.' }}</td></tr>{% endfor %}</tbody>
+      </table></div>
+    </section>
+
+    <section class="card">
+      <div class="card-h"><h2>Certificates</h2><span class="sub">installed RADIUS + HTTPS(RSA) server certs · every 6 h · other certs: CPPM traps/syslog</span></div>
+      <div class="card-b flush table-scroll"><table class="table compact">
+        <thead><tr><th>Certificate</th><th>Expires</th><th class="num">Days</th></tr></thead>
+        <tbody>{% for c in certs %}
+          {% set d = c.days_left %}
+          <tr><td><div class="cell-title">{{ c.service or '—' }} <span class="tag">{{ c.cert_type }}</span></div><div class="cell-sub wrap">{{ (c.subject or '')|truncate(90, true, '…') }}</div></td>
+          <td class="mono nowrap">{{ c.valid_to | localtime('%d %b %Y') if c.valid_to else '—' }}</td>
+          <td class="num"><span class="pill {{ 'crit' if d is not none and d < 7 else ('warn' if d is not none and d <= 30 else 'ok') }}">{{ 'expired' if d is not none and d < 0 else d }}</span></td></tr>
+        {% else %}<tr><td colspan="3" class="muted">Not polled yet.</td></tr>{% endfor %}</tbody>
+      </table></div>
+    </section>
+  </div>
+
+  <div class="two-col">
+    <section class="card">
+      <div class="card-h"><h2>Licenses</h2><span class="sub">REST · every 6 h · <a href="{{ url_for('main.licenses') }}">all nodes</a></span></div>
+      <div class="card-b">{% include "_license_table.html" %}</div>
+    </section>
+
+    <section class="card">
+      <div class="card-h"><h2>Interfaces &amp; mounts</h2><span class="sub">SNMP · every 5 min</span></div>
+      <div class="card-b flush table-scroll"><table class="table compact">
+        <thead><tr><th>Interface</th><th class="num">In</th><th class="num">Out</th><th class="num">Err+disc/min</th></tr></thead>
+        <tbody>{% for name, v in ifaces|dictsort %}
+          <tr><td>{{ name }} {% if v.get('if_oper_up') == 0 %}<span class="pill crit">down</span>{% endif %}</td>
+          <td class="num mono">{{ (v.get('if_in_bps', 0) / 1e6)|round(2) }} Mb/s</td><td class="num mono">{{ (v.get('if_out_bps', 0) / 1e6)|round(2) }} Mb/s</td>
+          <td class="num mono">{{ v.get('if_errors_per_min', 0)|round(1) }}</td></tr>
+        {% else %}<tr><td colspan="4" class="muted">Not polled yet.</td></tr>{% endfor %}
+        {% for m, pct in mounts|dictsort %}<tr><td>{{ icon('server', 'icon-sm') }} {{ m }}</td><td colspan="3" class="num mono">{{ pct|round(1) }}% used</td></tr>{% endfor %}
+        </tbody>
+      </table></div>
+    </section>
+  </div>
+
+  {% if sources %}
+  <section class="card">
+    <div class="card-h"><h2>Authentication sources</h2><span class="sub">radiusServerAuthTable · per minute</span></div>
+    <div class="card-b flush table-scroll"><table class="table compact">
+      <thead><tr><th>Source</th><th class="num">Requests/min</th><th class="num">Failures/min</th></tr></thead>
+      <tbody>{% for name, v in sources|dictsort %}<tr><td>{{ name }}</td><td class="num mono">{{ v.get('auth_src_req_per_min', 0)|round(1) }}</td>
+        <td class="num mono {{ 'lvl-crit' if v.get('auth_src_fail_per_min', 0) > 0 }}">{{ v.get('auth_src_fail_per_min', 0)|round(1) }}</td></tr>{% endfor %}</tbody>
+    </table></div>
+  </section>
+  {% endif %}
+
+  <div class="two-col">
+    <section class="card">
+      <div class="card-h"><h2>Recent traps</h2><div class="actions"><a class="btn btn-ghost btn-sm" href="{{ url_for('events.traps', node=n.id) }}">All</a></div></div>
+      <div class="card-b flush"><table class="table compact">
+        <tbody>{% for x in traps %}<tr><td class="mono nowrap">{{ x.received_at | localtime('%d %b %H:%M:%S') }}</td><td>{{ x.trap_name or 'UNKNOWN_TRAP' }}</td></tr>
+        {% else %}<tr><td class="muted">No traps from this node yet.</td></tr>{% endfor %}</tbody>
+      </table></div>
+    </section>
+    <section class="card">
+      <div class="card-h"><h2>Recent syslog</h2><div class="actions"><a class="btn btn-ghost btn-sm" href="{{ url_for('events.syslog', node=n.id) }}">All</a></div></div>
+      <div class="card-b flush"><table class="table compact">
+        <tbody>{% for x in logs %}<tr><td class="mono nowrap">{{ x.received_at | localtime('%d %b %H:%M:%S') }}</td><td class="mono msg-cell">{{ x.msg|truncate(140, true, '…') }}</td></tr>
+        {% else %}<tr><td class="muted">No syslog from this node yet.</td></tr>{% endfor %}</tbody>
+      </table></div>
+    </section>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='vendor/chart.umd.min.js') }}"></script>
+<script src="{{ url_for('static', filename='js/charts.js') }}?v={{ app_version }}"></script>
+{% endblock %}

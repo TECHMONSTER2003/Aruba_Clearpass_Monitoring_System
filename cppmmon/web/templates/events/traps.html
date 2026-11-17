@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icon %}
+{% from "events/_filters.html" import filters %}
+{% block title %}Live Traps{% endblock %}
+{% block page_title %}Live Traps{% endblock %}
+{% block page_sub %}SNMP traps received on UDP/162, decoded with the trap catalog{% endblock %}
+
+{% block content %}
+<section class="card">
+  <div class="card-h">
+    {{ filters('events.traps', f, nodes, [('', 'All traps'), ('unknown', 'Unknown OIDs'), ('unregistered', 'Unregistered senders'), ('badcomm', 'Rejected community')], 'Search name, OID or source IP') }}
+    <div class="actions">
+      <button type="button" class="live-toggle on" data-live-toggle="trap-rows" aria-pressed="true"><span class="live-dot"></span><span class="live-label">Live</span></button>
+    </div>
+  </div>
+  <div class="card-b flush table-scroll">
+    <table class="table ev-table">
+      <thead><tr><th>Received ({{ tz_label }})</th><th>Node / source</th><th>Trap</th><th>Key varbinds</th><th>Status</th><th></th></tr></thead>
+      <tbody id="trap-rows" data-live-tail="{{ url_for('events.trap_rows', q=f.q or None, node=f.node or None, kind=f.kind or None) }}"
+             data-after-id="{{ max_id }}" data-interval="5000">
+        {% include "events/_trap_rows.html" %}
+      </tbody>
+    </table>
+    {% if not rows %}
+    <div class="empty slim" data-empty-for="trap-rows">
+      <div class="empty-art">{{ icon('radio') }}</div>
+      <h3>No traps yet</h3>
+      <p>Point the CPPM trap receiver at this monitor (UDP/162), and set the same trap community on the node. New traps appear here within seconds.</p>
+    </div>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

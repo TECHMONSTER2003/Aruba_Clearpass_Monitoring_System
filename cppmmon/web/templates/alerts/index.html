@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icon %}
+{% block title %}Alerts{% endblock %}
+{% block page_title %}Alerts{% endblock %}
+{% block page_sub %}Deduplicated incidents from traps, syslog and polling{% endblock %}
+
+{% block content %}
+{% set sevcls = {'critical': 'crit', 'high': 'crit', 'medium': 'warn', 'low': 'info', 'info': 'muted'} %}
+{% set resolvable = rows | selectattr('state', 'ne', 'cleared') | list %}
+<form method="post" action="{{ url_for('alerts.resolve_bulk') }}" id="alert-form">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" name="state" value="{{ state }}">
+  <section class="card">
+    <div class="card-h">
+      <div class="seg-links" role="group" aria-label="Filter">
+        {% for key, label in [('active', 'Active'), ('open', 'Open'), ('suppressed', 'Suppressed'), ('cleared', 'Cleared'), ('all', 'All')] %}
+        <a class="{{ 'on' if state == key }}" href="{{ url_for('alerts.alerts', state=key) }}">{{ label }}
+          {% if key in ('open', 'suppressed', 'cleared') %}<span class="count">{{ counts.get(key, 0) }}</span>{% endif %}</a>
+        {% endfor %}
+      </div>
+      <div class="actions">
+        {% if can_edit and resolvable %}
+        <span class="sel-count muted" data-sel-count>0 selected</span>
+        <button class="btn btn-ghost" type="submit" data-needs-selection disabled>{{ icon('check', 'icon-sm') }} Resolve selected</button>
+        <button class="btn btn-danger" type="submit" name="all" value="1"
+                data-confirm="Resolve ALL {{ resolvable|length }} active alert(s) in this view and mark their tickets RESOLVED?">Resolve all shown</button>
+        {% endif %}
+        <a class="btn btn-ghost" href="{{ url_for('alerts.alerts', state=state) }}" title="Refresh">Refresh</a>
+      </div>
+    </div>
+    <div class="card-b flush table-scroll">
+      <table class="table" id="alert-table">
+        <thead><tr>
+          <th class="chk">{% if can_edit and resolvable %}<input type="checkbox" data-select-all="ids" aria-label="Select all">{% endif %}</th>
+          <th>Severity</th><th>Alert</th><th>Node</th><th>First / last seen ({{ tz_label }})</th><th class="num">Count</th><th>State</th><th>Ticket</th><th></th></tr></thead>
+        <tbody>
+        {% for a in rows %}
+          <tr>
+            <td class="chk">{% if can_edit and a.state != 'cleared' %}<input type="checkbox" name="ids" value="{{ a.id }}" aria-label="Select alert {{ a.id }}">{% endif %}</td>
+            <td><span class="pill {{ sevcls.get(a.severity, 'muted') }}">{{ a.severity }}</span>{% if a.flapping %}<div class="cell-sub lvl-warn">flapping</div>{% endif %}</td>
+            <td><div class="cell-title wrap">{{ a.title }}</div><div class="cell-sub mono">{{ a.rule_id }}</div></td>
+            <td>{% if a.node_id %}<a href="{{ url_for('nodes.overview', node_id=a.node_id) }}">{{ nodes.get(a.node_id, '#' ~ a.node_id) }}</a>{% else %}—{% endif %}</td>
+            <td class="mono nowrap">{{ a.first_seen | localtime('%d %b %H:%M') }}<div class="cell-sub">{{ a.last_seen | ago }}</div></td>
+            <td class="num">{{ a.occurrences }}</td>
+            <td>
+              {% if a.state == 'open' %}<span class="pill crit">open</span>
+              {% elif a.state == 'suppressed' %}<span class="pill muted" title="{{ a.suppress_reason }}">suppressed</span><div class="cell-sub">{{ (a.suppress_reason or '')|replace('_', ' ') }}</div>
+              {% else %}<span class="pill ok">cleared</span><div class="cell-sub">{{ a.cleared_at | ago }}</div>{% endif %}
+            </td>
+            <td>{% set t = tickets.get(a.ticket_id) %}{% if t %}<a class="mono" href="{{ url_for('alerts.ticket', ticket_no=t.ticket_no) }}">{{ t.ticket_no }}</a>
+                <div class="cell-sub">{{ t.priority }} · {{ t.status }}</div>{% else %}<span class="muted">—</span>{% endif %}</td>
+            <td class="num">
+              {% if can_edit and a.state != 'cleared' %}
+              <button class="btn btn-ghost btn-sm" type="submit" name="ids" value="{{ a.id }}" title="Clear this alert and resolve its ticket">Resolve</button>
+              {% endif %}
+            </td>
+          </tr>
+        {% else %}
+          <tr><td colspan="9"><div class="empty slim"><div class="empty-art">{{ icon('bell') }}</div><h3>No alerts here</h3><p>Nothing matches this filter.</p></div></td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</form>
+{% endblock %}

@@ -1,0 +1,10 @@
+[Unit]
+Description=CPPM Monitor - hourly rollups / daily retention
+
+[Timer]
+OnCalendar=hourly
+RandomizedDelaySec=120
+Persistent=true
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,91 @@
+{% from "_macros.html" import icon, theme_toggle %}
+<!doctype html>
+<html lang="en">
+<head>
+  {% include "_head.html" %}
+  <title>Sign in · ClearPass Monitor</title>
+</head>
+<body>
+{% include "_icons.html" %}
+<div class="login">
+  <section class="login-hero" aria-hidden="false">
+    <div class="hero-grid"></div>
+    <div class="hero-top">
+      <svg class="brand-mark" viewBox="0 0 32 32" width="28" height="28" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#0057A8"/><path d="M16 6l8 3.5v6.2c0 5-3.4 8.9-8 10.3-4.6-1.4-8-5.3-8-10.3V9.5z" fill="none" stroke="#fff" stroke-width="2"/><rect x="21" y="4" width="7" height="7" rx="1.5" fill="#2DD4BF"/></svg>
+    </div>
+
+    <div class="hero-body">
+      <div class="hero-kicker">Network Access Control · NOC</div>
+      <h1>ClearPass Monitor</h1>
+      <p>Proactive and reactive monitoring for Aruba ClearPass Policy Manager clusters, from first signal to a ServiceNow-ready ticket.</p>
+      <ul class="features">
+        <li>
+          <span class="feat-icon">{{ icon('activity') }}</span>
+          <div><b>Proactive polling</b><span>SNMP, REST API and ICMP health for every node</span></div>
+        </li>
+        <li>
+          <span class="feat-icon">{{ icon('radio') }}</span>
+          <div><b>Reactive events</b><span>SNMP traps and syslog decoded into actionable alerts</span></div>
+        </li>
+        <li>
+          <span class="feat-icon">{{ icon('ticket') }}</span>
+          <div><b>Ticket-ready</b><span>Deduplicated, correlated incidents with auto-clear</span></div>
+        </li>
+      </ul>
+    </div>
+
+    <div class="hero-foot">
+      <span>Aruba ClearPass Monitoring System</span>
+      <span>v{{ app_version }}</span>
+    </div>
+  </section>
+
+  <section class="login-panel">
+    <div class="login-theme">{{ theme_toggle() }}</div>
+    <div class="login-card">
+      <h2>Sign in</h2>
+      <p class="lead">Use your CPPM Monitor account to continue.</p>
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for cat, msg in messages %}
+        <div class="alert {{ 'crit' if cat == 'error' else cat }}" role="status">{{ icon('info') }}<span>{{ msg }}</span></div>
+        {% endfor %}
+      {% endwith %}
+      {% if error %}
+      <div class="alert crit" role="alert">{{ icon('alert') }}<span>{{ error }}</span></div>
+      {% endif %}
+
+      <form method="post" action="{{ url_for('auth.login', next=request.args.get('next')) }}" autocomplete="on" novalidate>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="field">
+          <label for="username">Username</label>
+          <div class="input-wrap">
+            {{ icon('user') }}
+            <input class="input" id="username" name="username" type="text" value="{{ username }}"
+                   autocomplete="username" autocapitalize="none" spellcheck="false" required autofocus maxlength="64">
+          </div>
+        </div>
+        <div class="field">
+          <label for="password">Password</label>
+          <div class="input-wrap">
+            {{ icon('lock') }}
+            <input class="input" id="password" name="password" type="password" autocomplete="current-password" required>
+            <button type="button" class="reveal" data-reveal="password" aria-pressed="false" aria-label="Show password">
+              <svg class="icon icon-eye" aria-hidden="true"><use href="#i-eye"/></svg>
+              <svg class="icon icon-eye-off" aria-hidden="true"><use href="#i-eye-off"/></svg>
+            </button>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">Sign in</button>
+      </form>
+
+      <div class="login-meta">
+        {{ icon('shield', 'icon-sm') }}
+        <span>Accounts are issued by the NOC administrator. Sessions expire after 8 hours.</span>
+      </div>
+    </div>
+  </section>
+</div>
+<script src="{{ url_for('static', filename='js/app.js') }}?v={{ app_version }}"></script>
+</body>
+</html>

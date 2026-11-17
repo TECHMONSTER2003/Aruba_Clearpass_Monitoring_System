@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icon %}
+{% block title %}Nodes{% endblock %}
+{% block page_title %}Nodes{% endblock %}
+{% block page_sub %}ClearPass nodes under monitoring and their connectivity{% endblock %}
+
+{% block content %}
+<section class="card">
+  <div class="card-h">
+    <h2>CPPM nodes</h2>
+    <span class="sub">{{ rows|length }} configured</span>
+    <div class="actions">
+      {% if can_edit %}<a class="btn btn-primary" href="{{ url_for('nodes.create') }}">{{ icon('plus', 'icon-sm') }} Add node</a>{% endif %}
+    </div>
+  </div>
+  {% if rows %}
+  <div class="card-b flush table-scroll">
+    <table class="table">
+      <thead>
+        <tr><th>Node</th><th>Management IP</th><th>Hostname / version</th><th>SNMP</th><th>API</th><th>Last test</th><th></th></tr>
+      </thead>
+      <tbody>
+      {% for n, st in rows %}
+        {% set checks = (st.last_test.checks if st and st.last_test else []) %}
+        <tr class="row-link" data-href="{{ url_for('nodes.overview', node_id=n.id) }}">
+          <td>
+            <div class="cell-title"><a href="{{ url_for('nodes.edit', node_id=n.id) }}">{{ n.name }}</a></div>
+            <div class="cell-sub">{{ n.site or '—' }}{% if not n.enabled %} · <span class="tag">polling paused</span>{% endif %}</div>
+          </td>
+          <td class="mono">{{ n.ip }}</td>
+          <td>
+            <div>{{ st.hostname if st and st.hostname else '—' }}</div>
+            <div class="cell-sub">{{ ('CPPM ' ~ st.version) if st and st.version else '' }}</div>
+          </td>
+          <td><span class="tag">v{{ n.snmp_version }}</span></td>
+          <td>
+            {% if n.api_enabled %}
+              <span class="tag">{{ 'password' if n.api_grant_type == 'password' else 'client cred.' }}</span>
+              {% if not n.api_verify_tls %}<span class="tag tag-warn" title="TLS certificate verification is off">TLS off</span>{% endif %}
+            {% else %}<span class="muted">off</span>{% endif %}
+          </td>
+          <td>
+            {% if checks %}
+              <div class="check-dots">
+              {% for c in checks %}
+                <span class="pill {{ 'muted' if c.skipped else ('ok' if c.ok else 'crit') }}" title="{{ c.error or c.summary }}">{{ c.name|upper }}</span>
+              {% endfor %}
+              </div>
+              <div class="cell-sub">{{ st.last_test_at | ago }}</div>
+            {% else %}<span class="pill muted">Not tested</span>{% endif %}
+          </td>
+          <td class="num nowrap">
+            {% if can_edit and n.enabled %}
+            <form method="post" action="{{ url_for('nodes.poll_node', node_id=n.id) }}" class="inline-form">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="next" value="{{ url_for('nodes.index') }}">
+              <button class="btn btn-primary btn-sm" type="submit" title="Run every poll job for this node now">Poll now</button>
+            </form>
+            {% endif %}
+            <a class="btn btn-ghost btn-sm" href="{{ url_for('nodes.overview', node_id=n.id) }}">Overview</a>
+            <a class="btn btn-ghost btn-sm" href="{{ url_for('nodes.edit', node_id=n.id) }}">Settings</a>
+            {% if can_edit and n.api_enabled %}<a class="btn btn-ghost btn-sm" href="{{ url_for('nodes.discover', node_id=n.id) }}" title="Find other members of this node's cluster">Discover</a>{% endif %}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="card-b">
+    <div class="empty">
+      <div class="empty-art">{{ icon('server') }}</div>
+      <h3>No ClearPass nodes yet</h3>
+      <p>Add the publisher first, then each subscriber. Credentials are encrypted at rest and never shown back.</p>
+      {% if can_edit %}<a class="btn btn-primary" href="{{ url_for('nodes.create') }}">{{ icon('plus', 'icon-sm') }} Add node</a>{% endif %}
+    </div>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

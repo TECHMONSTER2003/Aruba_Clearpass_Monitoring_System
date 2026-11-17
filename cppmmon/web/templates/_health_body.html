@@ -1,0 +1,108 @@
+{% from "_macros.html" import icon %}
+{% macro stat(label, value, cls='') -%}
+<div class="hstat {{ cls }}"><span>{{ label }}</span><b>{{ value }}</b></div>
+{%- endmacro %}
+{% set lag = eng.get('lag_s', 0) or 0 %}
+
+<section class="grid grid-4">
+  <div class="card stat"><span class="stat-icon {{ 'ok' if rx.get('db_ok', true) else 'crit' }}">{{ icon('radio', 'icon-lg') }}</span>
+    <div><div class="stat-label">Ingest (traps / syslog per s)</div><div class="stat-value">{{ rx.get('traps_per_s', 0) }} / {{ rx.get('syslog_per_s', 0) }}</div></div></div>
+  <div class="card stat"><span class="stat-icon {{ 'crit' if lag > 60 else 'ok' }}">{{ icon('activity', 'icon-lg') }}</span>
+    <div><div class="stat-label">Engine lag (oldest unprocessed)</div><div class="stat-value">{{ '%.0f'|format(lag) }} s</div></div></div>
+  <div class="card stat"><span class="stat-icon {{ 'crit' if rx.get('spool_files', 0) else 'ok' }}">{{ icon('file', 'icon-lg') }}</span>
+    <div><div class="stat-label">Spool backlog (DB-down buffer)</div><div class="stat-value">{{ rx.get('spool_files', 0) }} file(s)</div></div></div>
+  <div class="card stat"><span class="stat-icon {{ 'crit' if disk and disk.used_pct >= 85 else ('lime' if disk and disk.used_pct >= 75 else 'ok') }}">{{ icon('server', 'icon-lg') }}</span>
+    <div><div class="stat-label">Monitor disk used</div><div class="stat-value">{{ '%.0f%%'|format(disk.used_pct) if disk else '—' }}</div>
+      {% if disk %}<div class="cell-sub">{{ '%.1f'|format(disk.free_gb) }} GB free of {{ '%.0f'|format(disk.total_gb) }} GB</div>{% endif %}</div></div>
+</section>
+
+<section class="card">
+  <div class="card-h"><h2>Services</h2><span class="sub">heartbeats every 15 s</span></div>
+  <div class="card-b flush table-scroll">
+    <table class="table compact">
+      <thead><tr><th>Service</th><th>Status</th><th>Last heartbeat</th><th>Up since ({{ tz_label }})</th><th>PID</th></tr></thead>
+      <tbody>
+      {% if not db_ok %}<tr><td colspan="5"><span class="pill crit">Database unreachable</span></td></tr>{% endif %}
+      {% for r in rows %}
+        <tr>
+          <td><b>cppmmon-{{ r.name }}</b></td>
+          <td>{% if r.state == 'ok' %}<span class="pill ok">Running</span>{% elif r.state == 'stale' %}<span class="pill crit">No heartbeat</span>{% else %}<span class="pill muted">Not seen</span>{% endif %}</td>
+          <td>{% if r.name == 'web' %}<span class="muted">serving this page</span>{% else %}{{ r.beat.last_beat | ago if r.beat else '—' }}{% endif %}</td>
+          <td class="mono">{{ r.beat.started_at | localtime if r.beat else '—' }}</td>
+          <td class="mono">{{ r.beat.pid if r.beat and r.beat.pid else '—' }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<div class="two-col">
+  <section class="card">
+    <div class="card-h"><h2>Receiver</h2><span class="sub">since last restart</span></div>
+    <div class="card-b hgrid">
+      {{ stat('Trap packets', rx.get('trap_pkts', 0)) }}
+      {{ stat('Trap decode errors', rx.get('trap_decode_errors', 0), 'lvl-warn' if rx.get('trap_decode_errors') else '') }}
+      {{ stat('Rejected community', rx.get('trap_bad_community', 0), 'lvl-warn' if rx.get('trap_bad_community') else '') }}
+      {{ stat('Syslog UDP / TCP', rx.get('syslog_udp_msgs', 0) ~ ' / ' ~ rx.get('syslog_tcp_msgs', 0)) }}
+      {{ stat('Syslog repeats suppressed', rx.get('syslog_suppressed', 0)) }}
+      {{ stat('Credentials masked', rx.get('syslog_redacted', 0)) }}
+      {{ stat('Truncated (>64 KB)', rx.get('syslog_truncated', 0)) }}
+      {{ stat('Queue depth / drops', rx.get('queue_depth', 0) ~ ' / ' ~ rx.get('queue_drops', 0), 'lvl-crit' if rx.get('queue_drops') else '') }}
+      {{ stat('Written traps / syslog', rx.get('written_traps', 0) ~ ' / ' ~ rx.get('written_syslog', 0)) }}
+      {{ stat('Events emitted', rx.get('events_emitted', 0)) }}
+      {{ stat('DB errors / spooled / replayed', rx.get('db_errors', 0) ~ ' / ' ~ rx.get('spooled', 0) ~ ' / ' ~ rx.get('replayed', 0), 'lvl-warn' if rx.get('db_errors') else '') }}
+      {{ stat('Last batch', rx.get('last_batch_ms', 0) ~ ' ms') }}
+    </div>
+  </section>
+  <section class="card">
+    <div class="card-h"><h2>Engine</h2><span class="sub">single writer of alerts and tickets</span></div>
+    <div class="card-b hgrid">
+      {{ stat('Events processed', eng.get('processed', 0)) }}
+      {{ stat('Failed (processed=2)', eng.get('failed', 0), 'lvl-crit' if eng.get('failed') else '') }}
+      {{ stat('Alerts opened', eng.get('opened', 0)) }}
+      {{ stat('Re-occurrences', eng.get('reoccurred', 0)) }}
+      {{ stat('Cleared', eng.get('cleared', 0)) }}
+      {{ stat('Suppressed', eng.get('suppressed', 0)) }}
+      {{ stat('Tickets created', eng.get('tickets', 0)) }}
+      {{ stat('Ticket write failures', eng.get('ticket_failures', 0), 'lvl-crit' if eng.get('ticket_failures') else '') }}
+      {{ stat('Last batch', eng.get('last_batch_ms', 0) ~ ' ms') }}
+    </div>
+  </section>
+</div>
+
+<section class="card">
+  <div class="card-h"><h2>Poller jobs</h2><span class="sub">{{ pol.get('nodes', 0) }} node(s) polled · Poll-now requests served: {{ pol.get('poll_now_served', 0) }}</span></div>
+  <div class="card-b flush table-scroll">
+    <table class="table compact">
+      <thead><tr><th>Job</th><th class="num">Runs</th><th class="num">Failures</th><th class="num">Last (ms)</th><th class="num">Max (ms)</th><th>Last run</th><th>Last error</th></tr></thead>
+      <tbody>
+      {% for name, j in (pol.get('jobs') or {}).items() %}
+        <tr><td class="mono">{{ name }}</td><td class="num">{{ j.runs }}</td>
+          <td class="num {{ 'lvl-warn' if j.failures }}">{{ j.failures }}</td><td class="num mono">{{ j.last_ms }}</td><td class="num mono">{{ j.max_ms }}</td>
+          <td class="mono nowrap">{{ (j.last_at or '—')|replace('T', ' ') }} UTC</td><td class="wrap muted">{{ j.last_error or '' }}</td></tr>
+      {% else %}<tr><td colspan="7" class="muted">No poller statistics yet.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<div class="two-col">
+  <section class="card">
+    <div class="card-h"><h2>Storage</h2><span class="sub">largest tables</span></div>
+    <div class="card-b flush table-scroll"><table class="table compact">
+      <thead><tr><th>Table</th><th class="num">≈ rows</th><th class="num">MB</th></tr></thead>
+      <tbody>{% for t in tables %}<tr><td class="mono">{{ t.name }}</td><td class="num">{{ '{:,}'.format(t.approx_rows or 0) }}</td><td class="num">{{ t.mb }}</td></tr>
+      {% else %}<tr><td colspan="3" class="muted">n/a</td></tr>{% endfor %}</tbody>
+    </table></div>
+  </section>
+  <section class="card">
+    <div class="card-h"><h2>Maintenance &amp; backup</h2><span class="sub">hourly timer · daily backup</span></div>
+    <div class="card-b hgrid">
+      {{ stat('Last rollup rows', mnt.get('rollup_rows', '—')) }}
+      {{ stat('Last run', (mnt.get('duration_s', '—') ~ ' s')) }}
+      {{ stat('Deleted (last run)', (mnt.get('deleted') or {}).values()|sum if mnt.get('deleted') else '—') }}
+      {{ stat('Latest backup', backup or 'none yet', '' if backup else 'lvl-warn') }}
+    </div>
+  </section>
+</div>

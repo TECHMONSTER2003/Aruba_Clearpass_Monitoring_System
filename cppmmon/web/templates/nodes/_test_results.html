@@ -1,0 +1,40 @@
+{% from "_macros.html" import icon %}
+{% if error %}
+<div class="alert crit">{{ icon('alert') }}<span>{{ error }}</span></div>
+{% else %}
+{# expects: checks (list of CheckResult dicts), at (ISO UTC), fresh (bool) #}
+{% set labels = {'icmp': 'ICMP reachability', 'snmp': 'SNMP · CPPM-MIB', 'api': 'REST API · OAuth'} %}
+{% set ns = namespace(ok=0, run=0) %}
+{% for c in checks %}{% if not c.skipped %}{% set ns.run = ns.run + 1 %}{% if c.ok %}{% set ns.ok = ns.ok + 1 %}{% endif %}{% endif %}{% endfor %}
+<div class="test-head {{ 'all-ok' if ns.ok == ns.run and ns.run > 0 else 'has-fail' }}">
+  <b>{{ ns.ok }}/{{ ns.run }} checks passed</b>
+  <span class="muted">{{ 'just now' if fresh else ('last run ' ~ at.replace('T', ' ') ~ ' UTC') }}</span>
+</div>
+<ul class="checks">
+  {% for c in checks %}
+  <li class="check {{ 'skip' if c.skipped else ('pass' if c.ok else 'fail') }}">
+    <div class="check-row">
+      <span class="check-icon">{{ icon('info' if c.skipped else ('check' if c.ok else 'alert')) }}</span>
+      <div class="check-main">
+        <div class="check-title">{{ labels.get(c.name, c.name) }}</div>
+        <div class="check-sum">{{ c.summary if (c.ok or c.skipped) else (c.error or 'failed') }}</div>
+      </div>
+      {% if c.latency_ms is not none and not c.skipped %}<span class="check-ms mono">{{ '%.1f'|format(c.latency_ms) }} ms</span>{% endif %}
+    </div>
+    {% if c.hint and not c.ok and not c.skipped %}
+    <div class="check-hint">{{ icon('info', 'icon-sm') }}<span>{{ c.hint }}</span></div>
+    {% endif %}
+    {% if c.details and not c.skipped %}
+    <details class="check-details">
+      <summary>Details</summary>
+      <dl class="kv">
+        {% for k, val in c.details.items() if val is not none and val != '' %}
+        <dt>{{ k }}</dt><dd class="mono">{{ val }}</dd>
+        {% endfor %}
+      </dl>
+    </details>
+    {% endif %}
+  </li>
+  {% endfor %}
+</ul>
+{% endif %}

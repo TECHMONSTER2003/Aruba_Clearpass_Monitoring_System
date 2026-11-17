@@ -1,0 +1,22 @@
+{# expects: lic (list of License rows) #}
+{% if lic %}
+<table class="table compact lic-table">
+  <thead><tr><th>Application</th><th>Usage</th><th class="num">Used / licensed</th><th>Type</th><th>Activated</th><th>Added ({{ tz_label }})</th><th>Expires</th></tr></thead>
+  <tbody>
+  {% for x in lic %}
+    {% set pct = (100.0 * (x.used or 0) / x.total) if x.total else none %}
+    <tr>
+      <td><b>{{ x.app_name }}</b></td>
+      <td class="lic-bar"><div class="bar"><span class="fill lvl-{{ 'crit' if pct and pct >= 100 else ('warn' if pct and pct >= 90 else 'ok') }}" style="width: {{ [pct or 0, 100]|min }}%"></span></div>
+        <span class="cell-sub">{{ '%.0f%%'|format(pct) if pct is not none else '—' }}</span></td>
+      <td class="num mono">{{ x.used or 0 }} / {{ x.total or '—' }}</td>
+      <td>{{ x.license_type or '—' }}</td>
+      <td>{% if x.activated is none %}—{% elif x.activated %}<span class="pill ok">Yes</span>{% else %}<span class="pill crit">No</span>{% endif %}</td>
+      <td class="mono nowrap">{{ x.added_on | localtime('%d %b %Y') if x.added_on else '—' }}</td>
+      <td class="mono nowrap">{{ x.expires_at | localtime('%d %b %Y') if x.expires_at else 'Never' }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+<p class="field-help">CPPM licenses are a cluster-wide pool; every node in a cluster reports the same pool.</p>
+{% else %}<p class="muted">Not polled yet (needs the REST API). Use Poll now to fetch immediately.</p>{% endif %}
